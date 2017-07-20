@@ -3,7 +3,7 @@ use token::{Token, TokenType, TokenValue};
 #[allow(dead_code)]
 pub struct Grammar {
     table: [Token; 48],
-    prefix: [String; 4],
+    prefices: [String; 4],
     max_key_len: i32,
 }
 
@@ -110,16 +110,16 @@ impl Grammar {
                 Token::new("starts with", TokenType::Anchor, TokenValue::StartsWith),
                 Token::new("must end", TokenType::Anchor, TokenValue::MustEnd),
 
-                Token::new(",", TokenType::SrcWhitespece, TokenValue::Space),
-                Token::new(" ", TokenType::SrcWhitespece, TokenValue::Space),
-                Token::new("\n", TokenType::SrcWhitespece, TokenValue::Space),
+                Token::new(",", TokenType::SrcWhitespace, TokenValue::Space),
+                Token::new(" ", TokenType::SrcWhitespace, TokenValue::Space),
+                Token::new("\n", TokenType::SrcWhitespace, TokenValue::Space),
 
                 Token::new("\"", TokenType::Delimiter, TokenValue::String),
                 Token::new("\'", TokenType::Delimiter, TokenValue::String),
-                Token::new("Token::new(", TokenType::Delimiter, TokenValue::GroupStart),
+                Token::new("(", TokenType::Delimiter, TokenValue::GroupStart),
                 Token::new(")", TokenType::Delimiter, TokenValue::GroupEnd),
             ],
-            prefix: [
+            prefices: [
                 String::from("exactly"),
                 String::from("once"),
                 String::from("time"),
@@ -129,11 +129,15 @@ impl Grammar {
         }
     }
 
-    pub fn max_key_len(self) -> i32 {
+    pub fn max_key_len(&self) -> i32 {
         self.max_key_len
     }
 
-    pub fn has_token(token: &str) -> bool {
-        false
+    pub fn is_prefix(&self, token: &str) -> bool {
+        self.prefices.iter().any(|t| *t == String::from(token))
+    }
+
+    pub fn get(&self, token: &str) -> Option<&Token> {
+        self.table.iter().find(|t| t.val() == String::from(token))
     }
 }

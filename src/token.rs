@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum TokenType {
     Character,
     Quantifier,
@@ -8,7 +6,7 @@ pub enum TokenType {
     Lookaround,
     Flag,
     Anchor,
-    SrcWhitespece,
+    SrcWhitespace,
     SrcNumber,
     SrcString,
     Delimiter,
@@ -16,7 +14,7 @@ pub enum TokenType {
     Undefined,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum TokenValue {
     Literally,
     OneOf,
@@ -75,14 +73,13 @@ pub enum TokenValue {
     Undefined,
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct Token {
     val: String,
     token_type: TokenType,
     token_value: TokenValue,
 }
 
-#[allow(dead_code)]
 impl Token {
     pub fn new(t_val: &str, t_type: TokenType, t_value: TokenValue) -> Token {
         Token {
@@ -92,15 +89,23 @@ impl Token {
         }
     }
 
-    pub fn val(self) -> String {
-        self.val
+    pub fn start() -> Token {
+        Token {
+            val: "".to_owned(),
+            token_type: TokenType::Undefined,
+            token_value: TokenValue::Undefined,
+        }
     }
 
-    pub fn token_type(self) -> TokenType {
+    pub fn val(&self) -> String {
+        self.val.to_string()
+    }
+
+    pub fn token_type(&self) -> TokenType {
         self.token_type
     }
 
-    pub fn token_value(self) -> TokenValue {
+    pub fn token_value(&self) -> TokenValue {
         self.token_value
     }
 }
