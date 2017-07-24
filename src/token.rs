@@ -74,26 +74,18 @@ pub enum TokenValue {
 }
 
 #[derive(Clone)]
-pub struct Token {
-    val: String,
+pub struct Token<'a> {
+    val: &'a str,
     token_type: TokenType,
     token_value: TokenValue,
 }
 
-impl Token {
+impl<'a> Token<'a> {
     pub fn new(t_val: &str, t_type: TokenType, t_value: TokenValue) -> Token {
         Token {
-            val: t_val.to_owned(),
+            val: t_val,
             token_type: t_type,
             token_value: t_value,
-        }
-    }
-
-    pub fn start() -> Token {
-        Token {
-            val: "".to_owned(),
-            token_type: TokenType::Undefined,
-            token_value: TokenValue::Undefined,
         }
     }
 

@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Shanavas M <shanvas@disroot.org>"]
 
 [dependencies]
+lazy_static = "0.2.8"
