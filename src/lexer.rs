@@ -1,6 +1,6 @@
 use std::str::SplitWhitespace;
 use token::Token;
-use grammar::Grammar;
+use grammar::get_token;
 
 enum State {
     Identifier,
@@ -12,29 +12,22 @@ enum State {
     Error
 }
 
-pub struct Lexer {
-    src: String,
-    tokens: SplitWhitespace,
+pub struct Lexer<'a> {
+    src: &'a str,
+    tokens: SplitWhitespace<'a>,
     state: State,
-    curr_token: Token,
 }
 
-impl Lexer {
+impl<'a> Lexer<'a> {
     pub fn new(src: &str) -> Lexer {
         Lexer {
-            grammar: Grammar::new(),
             src: src,
             tokens: src.split_whitespace(),
-            state: State::None,
-            curr_token: Token::start(),
+            state: State::None
         }
     }
 
-    pub fn token(&self) -> Token {
-        self.curr_token
-    }
-
-    pub fn next(&self) -> Option<&Token> {
-        self.tokens.next().map_or(None, |s| grammar.get(s))
+    pub fn next(&mut self) -> Option<Token> {
+        self.tokens.next().map_or(None, |s| get_token(s))
     }
 }

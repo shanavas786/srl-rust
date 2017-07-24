@@ -63,7 +63,7 @@ lazy_static! {
 }
 
 
-pub fn get<'a>(token: &'a str) -> Option<Token> {
+pub fn get_token<'a>(token: &'a str) -> Option<Token> {
     GRAMMAR_TABLE.get(token).and_then(|tk| {
         Some(Token::new(token, tk.0, tk.1))
     })

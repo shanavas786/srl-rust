@@ -1,4 +1,4 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TokenType {
     Character,
     Quantifier,
@@ -14,7 +14,7 @@ pub enum TokenType {
     Undefined,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TokenValue {
     Literally,
     OneOf,
@@ -73,7 +73,7 @@ pub enum TokenValue {
     Undefined,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token<'a> {
     val: &'a str,
     token_type: TokenType,
