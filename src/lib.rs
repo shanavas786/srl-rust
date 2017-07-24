@@ -3,4 +3,4 @@ extern crate lazy_static;
 
 mod token;
 mod grammar;
-mod lexer;
+pub mod lexer;
