@@ -12,29 +12,37 @@ enum State {
     Error
 }
 
-pub struct Lexer {
-    src: String,
-    tokens: SplitWhitespace,
+pub struct Lexer<'a> {
+    grammar: Grammar,
+    tokens: SplitWhitespace<'a>,
     state: State,
-    curr_token: Token,
+    curr_token: &'a str,
 }
 
-impl Lexer {
+impl<'a> Lexer<'a> {
     pub fn new(src: &str) -> Lexer {
         Lexer {
             grammar: Grammar::new(),
-            src: src,
             tokens: src.split_whitespace(),
             state: State::None,
-            curr_token: Token::start(),
+            curr_token: "",
         }
     }
 
-    pub fn token(&self) -> Token {
-        self.curr_token
-    }
-
-    pub fn next(&self) -> Option<&Token> {
-        self.tokens.next().map_or(None, |s| grammar.get(s))
+    pub fn next(&mut self) -> Option<&Token> {
+        if let Some(mut s) = self.tokens.next() {
+            if let Some(token) = self.grammar.get(s) {
+                if token.is_partial() {
+                    return self.next();
+                } else {
+                    Some(&token)
+                }
+            } else {
+                panic!("invalid input");
+            }
+        } else {
+            self.state = State::EndOfFile;
+            None
+        }
     }
 }

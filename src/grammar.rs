@@ -2,7 +2,7 @@ use token::{Token, TokenType, TokenValue};
 
 #[allow(dead_code)]
 pub struct Grammar {
-    table: [Token; 48],
+    table: [Token; 70],
     prefices: [String; 4],
     max_key_len: i32,
 }
@@ -13,18 +13,22 @@ impl Grammar {
         Grammar {
             table: [
                 Token::new("literally", TokenType::Character, TokenValue::Literally),
+                Token::new("one", TokenType::Partial, TokenValue::Undefined),
                 Token::new("one of", TokenType::Character, TokenValue::OneOf),
                 Token::new("letter", TokenType::Character, TokenValue::Letter),
+                Token::new("uppercase", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "uppercase letter",
                     TokenType::Character,
                     TokenValue::UppercaseLetter,
                 ),
+                Token::new("any", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "any character",
                     TokenType::Character,
                     TokenValue::AnyCharacter,
                 ),
+                Token::new("no", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "no character",
                     TokenType::Character,
@@ -32,6 +36,7 @@ impl Grammar {
                 ),
                 Token::new("digit", TokenType::Character, TokenValue::Digit),
                 Token::new("anything", TokenType::Character, TokenValue::Anything),
+                Token::new("new", TokenType::Partial, TokenValue::Undefined),
                 Token::new("new line", TokenType::Character, TokenValue::NewLine),
                 Token::new("whitespace", TokenType::Character, TokenValue::Whitespace),
                 Token::new(
@@ -58,16 +63,21 @@ impl Grammar {
                     TokenValue::BetweenXAndYTimes,
                 ),
                 Token::new("optional", TokenType::Quantifier, TokenValue::Optional),
+                Token::new("once", TokenType::Partial, TokenValue::Undefined),
+                Token::new("once or", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "once or more",
                     TokenType::Quantifier,
                     TokenValue::OnceOrMore,
                 ),
+                Token::new("never", TokenType::Partial, TokenValue::Undefined),
+                Token::new("never or", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "never or more",
                     TokenType::Quantifier,
                     TokenValue::NeverOrMore,
                 ),
+                Token::new("at", TokenType::Partial, TokenValue::Undefined),
                 Token::new("at least", TokenType::Quantifier, TokenValue::AtLeastXTimes),
                 Token::new("time", TokenType::Quantifier, TokenValue::Time),
                 Token::new("times", TokenType::Quantifier, TokenValue::Times),
@@ -77,6 +87,10 @@ impl Grammar {
                 Token::new("until", TokenType::Group, TokenValue::Until),
                 Token::new("as", TokenType::Group, TokenValue::As),
 
+                Token::new("if", TokenType::Partial, TokenValue::Undefined),
+                Token::new("if not", TokenType::Partial, TokenValue::Undefined),
+                Token::new("if followed", TokenType::Partial, TokenValue::Undefined),
+                Token::new("if not followed", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "if followed by",
                     TokenType::Lookaround,
@@ -87,6 +101,8 @@ impl Grammar {
                     TokenType::Lookaround,
                     TokenValue::IfNotFollowedBy,
                 ),
+                Token::new("if already", TokenType::Partial, TokenValue::Undefined),
+                Token::new("if not already", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "if already had",
                     TokenType::Lookaround,
@@ -98,16 +114,22 @@ impl Grammar {
                     TokenValue::IfNotAlreadyHad,
                 ),
 
+                Token::new("case", TokenType::Partial, TokenValue::Undefined),
                 Token::new(
                     "case insensitive",
                     TokenType::Flag,
                     TokenValue::CaseInsensitive,
                 ),
+                Token::new("multi", TokenType::Partial, TokenValue::Undefined),
                 Token::new("multi line", TokenType::Flag, TokenValue::MultiLine),
+                Token::new("all", TokenType::Partial, TokenValue::Undefined),
                 Token::new("all lazy", TokenType::Flag, TokenValue::AllLazy),
 
+                Token::new("begin", TokenType::Partial, TokenValue::Undefined),
                 Token::new("begin with", TokenType::Anchor, TokenValue::BeginWith),
+                Token::new("start", TokenType::Partial, TokenValue::Undefined),
                 Token::new("starts with", TokenType::Anchor, TokenValue::StartsWith),
+                Token::new("must", TokenType::Partial, TokenValue::Undefined),
                 Token::new("must end", TokenType::Anchor, TokenValue::MustEnd),
 
                 Token::new(",", TokenType::SrcWhitespace, TokenValue::Space),
@@ -138,6 +160,7 @@ impl Grammar {
     }
 
     pub fn get(&self, token: &str) -> Option<&Token> {
-        self.table.iter().find(|t| t.val() == String::from(token))
+        let token = String::from(token);
+        self.table.iter().find(|t| t.val() == token)
     }
 }

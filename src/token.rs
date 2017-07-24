@@ -1,5 +1,6 @@
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TokenType {
+    Partial,
     Character,
     Quantifier,
     Group,
@@ -14,7 +15,7 @@ pub enum TokenType {
     Undefined,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TokenValue {
     Literally,
     OneOf,
@@ -73,7 +74,7 @@ pub enum TokenValue {
     Undefined,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Token {
     val: String,
     token_type: TokenType,
@@ -107,5 +108,12 @@ impl Token {
 
     pub fn token_value(&self) -> TokenValue {
         self.token_value
+    }
+
+    pub fn is_partial(&self) -> bool {
+        match self.token_type {
+            TokenType::Partial => true,
+            _ => false,
+        }
     }
 }
