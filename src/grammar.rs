@@ -58,6 +58,7 @@ lazy_static! {
         table.insert("\'", (TokenType::Delimiter, TokenValue::String));
         table.insert("(", (TokenType::Delimiter, TokenValue::GroupStart));
         table.insert(")", (TokenType::Delimiter, TokenValue::GroupEnd));
+        table.insert("eof", (TokenType::EndOfFile, TokenValue::EndOfFile));
         table
     };
 }
@@ -67,4 +68,8 @@ pub fn get_token<'a>(token: &'a str) -> Option<Token> {
     GRAMMAR_TABLE.get(token).and_then(|tk| {
         Some(Token::new(token, tk.0, tk.1))
     })
+}
+
+pub fn eof() -> Token {
+    Token::new("", TokenType::EndOfFile, TokenValue::EndOfFile)
 }

@@ -74,16 +74,16 @@ pub enum TokenValue {
 }
 
 #[derive(Clone, Debug)]
-pub struct Token<'a> {
-    val: &'a str,
+pub struct Token {
+    val: String,
     token_type: TokenType,
     token_value: TokenValue,
 }
 
-impl<'a> Token<'a> {
+impl Token {
     pub fn new(t_val: &str, t_type: TokenType, t_value: TokenValue) -> Token {
         Token {
-            val: t_val,
+            val: String::fro(t_val),
             token_type: t_type,
             token_value: t_value,
         }
@@ -100,4 +100,5 @@ impl<'a> Token<'a> {
     pub fn token_value(&self) -> TokenValue {
         self.token_value
     }
+
 }
