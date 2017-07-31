@@ -1,21 +1,5 @@
 #[derive(Clone, Copy, Debug)]
 pub enum TokenType {
-    Character,
-    Quantifier,
-    Group,
-    Lookaround,
-    Flag,
-    Anchor,
-    SrcWhitespace,
-    SrcNumber,
-    SrcString,
-    Delimiter,
-    EndOfFile,
-    Undefined,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum TokenValue {
     Literally,
     OneOf,
     Letter,
@@ -77,15 +61,13 @@ pub enum TokenValue {
 pub struct Token {
     val: String,
     token_type: TokenType,
-    token_value: TokenValue,
 }
 
 impl Token {
-    pub fn new(t_val: &str, t_type: TokenType, t_value: TokenValue) -> Token {
+    pub fn new(t_val: &str, t_type: TokenType) -> Token {
         Token {
-            val: String::fro(t_val),
+            val: String::from(t_val),
             token_type: t_type,
-            token_value: t_value,
         }
     }
 
@@ -96,9 +78,4 @@ impl Token {
     pub fn token_type(&self) -> TokenType {
         self.token_type
     }
-
-    pub fn token_value(&self) -> TokenValue {
-        self.token_value
-    }
-
 }

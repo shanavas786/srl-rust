@@ -1,8 +1,22 @@
 use std::str::Chars;
+use std::iter::Peekable;
 use token::Token;
-use grammar::{get_token, eof};
+use std::ascii::AsciiExt;
 
+#[derive(PartialEq)]
 enum State {
+    Character,
+    Quantifier,
+    Group,
+    Lookaround,
+    Flag,
+    Anchor,
+    SrcWhitespace,
+    SrcNumber,
+    SrcString,
+    Delimiter,
+    Undefined,
+
     Identifier,
     Number,
     String,
@@ -13,56 +27,109 @@ enum State {
 }
 
 pub struct Lexer<'a> {
-    src: Chars<'a>,
+    src: Peekable<Chars<'a>>,
     buffer: String,
+    last_char: char,
     state: State,
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(src: &str) -> Lexer {
         Lexer {
-            src: src.chars(),
+            src: src.chars().peekable(),
             buffer: String::new(),
+            last_char: ' ',
             state: State::None
         }
     }
 
-    pub fn next_token(&mut self) -> Option<Token> {
-        match self.state {
-            State::None => self.next_ident(),
-            State::String => self.next_string(),
-            State::Number => self.next_number(),
-            _ => None,
+    /// sets last char to ch
+    fn last_char(&mut self, ch: char) {
+        self.last_char = ch;
+    }
+
+    /// check if lexer is in Identifier state
+    fn is_ident(&self) -> bool {
+        self.state == State::Identifier
+    }
+
+    /// sets identifer state
+    fn set_ident(&mut self) {
+        self.state = State::Identifier
+    }
+
+    /// Checks if eof is reached
+    fn is_eof(&self) -> bool {
+        self.state == State::EndOfFile
+    }
+
+    /// sets identifer state
+    fn set_eof(&mut self) {
+        self.state = State::EndOfFile
+    }
+
+    /// sets error state
+    fn set_error(&mut self) {
+        self.state = State::Error
+    }
+
+    /// Checks if char is src whitespace
+    fn is_src_space(&mut self, ch: char) -> bool {
+        match ch {
+            ' ' => {
+                // skip space if buffer is empty or last char is space
+                self.is_ident() && (self.buffer.is_empty() || self.last_char == ' ')
+            },
+            ',' | '\n' | '\t' => { self.is_ident() && self.buffer.is_empty() },
+            _ => { false }
         }
     }
 
-    fn next_ident(&mut self) -> Option<Token> {
-        // if last char in buffer is space
-        let space: bool = false;
+    /// checks if ch is one of whitespace chars allowed in token
+    /// eg: any\nof is a valid identifier
+    fn is_token_whitespace(&self, ch: char) -> bool {
+        (ch == ',') || (ch == '\n') || (ch == '\t')
+    }
 
-        while let Some(ch) = self.src.next() {
-            if ch != ' ' {
-                space = false;
-                self.buffer.push(ch);
-            } else if space {
-                // ignore repeated spaces
-                continue;
-            }
-            if let Some(token) = get_token(&self.buffer) {
-                // check if buffer matches a token
-                return Some(token);
+    /// Returns next identifier Token
+    fn next_identifier(&mut self) -> Option<Token> {
+        self.set_ident();
+
+        loop {
+            if let Some(ch) = self.src.next() {
+                if self.is_src_space(ch) {
+                    continue;
+                }
+
+                if ch.is_ascii() && ch.is_alphabetic() {
+                    self.buffer.push(ch);
+                    self.last_char(ch);
+                } else if self.is_token_whitespace(ch) {
+                    // machik here
+                    // seach for token, if found set state accordinly
+                    // if not if buffer is shorter that longest identifier, append space to
+                    // buffer else errrrrrr....
+                } else {
+                    // invalid char in identifier
+                    self.set_error();
+                }
+            } else {
+                // check buffer is valid token else set err state
+                self.set_eof();
+                break;
             }
         }
-        Some(eof())
-    }
-
-    // TODO change return type to Result<Token, Err>
-    // TODO add Token::from_string method
-    fn next_string(&mut self) -> Option<Token> {
-       None
-    }
-
-    fn next_number(&mut self) -> Option<Token> {
         None
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Token> {
+        match self.state {
+            State::None | State::Identifier => { self.next_identifier() },
+            _ => { None },
+        }
     }
 }
