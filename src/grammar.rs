@@ -43,7 +43,7 @@ lazy_static! {
         table.insert("all lazy", TokenType::AllLazy);
 
         table.insert("begin with", TokenType::BeginWith);
-        table.insert("starts with", TokenType::StartsWith);
+        table.insert("starts with", TokenType::BeginWith);
         table.insert("must end", TokenType::MustEnd);
 
         table.insert(",", TokenType::Space);

@@ -44,7 +44,6 @@ pub enum TokenType {
     AllLazy,
 
     BeginWith,
-    StartsWith,
     MustEnd,
 
     Space,

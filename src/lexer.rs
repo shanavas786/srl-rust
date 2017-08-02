@@ -1,6 +1,6 @@
 use std::str::Chars;
 use std::iter::Peekable;
-use token::Token;
+use token::{Token, TokenType};
 use grammar::{get_token, MAX_SPC_INDEX};
 use std::ascii::AsciiExt;
 
@@ -54,6 +54,16 @@ impl<'a> Lexer<'a> {
         self.buffer = String::new();
     }
 
+    /// set next state
+    fn next_state(&mut self, token: &Token) {
+        // TODO may require last token to reduce number of states
+        match token.token_type() {
+            TokenType::BeginWith => { self.set_ident() },
+            TokenType::Raw => { self.set_string() },
+            _ => {},
+        }
+    }
+
     /// check if lexer is in Identifier state
     fn is_ident(&self) -> bool {
         self.state == State::Identifier
@@ -62,6 +72,11 @@ impl<'a> Lexer<'a> {
     /// sets identifer state
     fn set_ident(&mut self) {
         self.state = State::Identifier
+    }
+
+    /// sets string state
+    fn set_string(&mut self) {
+        self.state = State::String
     }
 
     /// Checks if eof is reached
@@ -108,13 +123,15 @@ impl<'a> Lexer<'a> {
                 }
 
                 if ch.is_ascii() && ch.is_alphabetic() {
-                    self.buffer.push(ch);
+                    // identifiers are case insensitive
+                    self.buffer.push(ch.to_ascii_lowercase());
                     self.last_char(ch);
                 } else if self.is_token_whitespace(ch) {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
                         // TODO set next state
                         self.reset_buffer();
+                        self.next_state(&token);
                         return Some(token);
                     } else if self.buffer.len() < MAX_SPC_INDEX {
                         // add space to token
