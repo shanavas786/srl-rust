@@ -58,6 +58,8 @@ lazy_static! {
     };
 }
 
+/// greatest index space can occurr in a token
+pub const MAX_SPC_INDEX: usize = 15;
 
 pub fn get_token<'a>(token: &'a str) -> Option<Token> {
     GRAMMAR_TABLE.get(token).and_then(|tk| {

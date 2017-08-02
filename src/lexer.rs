@@ -1,6 +1,7 @@
 use std::str::Chars;
 use std::iter::Peekable;
 use token::Token;
+use grammar::{get_token, MAX_SPC_INDEX};
 use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
@@ -48,6 +49,11 @@ impl<'a> Lexer<'a> {
         self.last_char = ch;
     }
 
+    /// reset buffer to empty string
+    fn reset_buffer(&mut self) {
+        self.buffer = String::new();
+    }
+
     /// check if lexer is in Identifier state
     fn is_ident(&self) -> bool {
         self.state == State::Identifier
@@ -88,7 +94,7 @@ impl<'a> Lexer<'a> {
     /// checks if ch is one of whitespace chars allowed in token
     /// eg: any\nof is a valid identifier
     fn is_token_whitespace(&self, ch: char) -> bool {
-        (ch == ',') || (ch == '\n') || (ch == '\t')
+        (ch == ' ') || (ch == ',') || (ch == '\n') || (ch == '\t')
     }
 
     /// Returns next identifier Token
@@ -105,13 +111,24 @@ impl<'a> Lexer<'a> {
                     self.buffer.push(ch);
                     self.last_char(ch);
                 } else if self.is_token_whitespace(ch) {
-                    // machik here
-                    // seach for token, if found set state accordinly
-                    // if not if buffer is shorter that longest identifier, append space to
-                    // buffer else errrrrrr....
+                    if let Some(token) = get_token(&self.buffer) {
+                        // valid token !!
+                        // TODO set next state
+                        self.reset_buffer();
+                        return Some(token);
+                    } else if self.buffer.len() < MAX_SPC_INDEX {
+                        // add space to token
+                        self.buffer.push(' ');
+                        self.last_char(' ');
+                    } else {
+                        // invalid identifier
+                        self.set_error();
+                        break;
+                    }
                 } else {
                     // invalid char in identifier
                     self.set_error();
+                    break;
                 }
             } else {
                 // check buffer is valid token else set err state
