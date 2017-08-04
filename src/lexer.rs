@@ -1,24 +1,12 @@
 use std::str::Chars;
 use std::iter::Peekable;
 use token::{Token, TokenType};
-use grammar::{get_token, MAX_SPC_INDEX};
+use grammar::{MAX_SPC_INDEX, get_token, get_string_token};
 use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
 enum State {
-    Character,
-    Quantifier,
-    Group,
-    Lookaround,
-    Flag,
-    Anchor,
-    SrcNumber,
-    SrcString,
-    Delimiter,
-    Undefined,
-
     Identifier,
-    Number,
     String,
 
     None,
@@ -82,14 +70,20 @@ impl<'a> Lexer<'a> {
         self.state = State::String
     }
 
-    /// Checks if eof is reached
-    fn is_eof(&self) -> bool {
-        self.state == State::EndOfFile
+    /// sets string state
+    fn is_string(&self) -> bool {
+        self.state == State::String
     }
 
     /// sets identifer state
     fn set_eof(&mut self) {
         self.state = State::EndOfFile
+    }
+
+    /// check error state
+    #[allow(dead_code)]
+    fn is_error(&self) -> bool {
+        self.state == State::Error
     }
 
     /// sets error state
@@ -102,7 +96,13 @@ impl<'a> Lexer<'a> {
         match ch {
             ' ' => {
                 // skip space if buffer is empty or last char is space
-                self.is_ident() && (self.buffer.is_empty() || self.last_char == ' ')
+                if self.is_ident() {
+                    (self.buffer.is_empty() || self.last_char == ' ')
+                } else if self.is_string() {
+                    self.buffer.is_empty()
+                } else {
+                    false
+                }
             }
             ',' | '\n' | '\t' => self.is_ident() && self.buffer.is_empty(),
             _ => false,
@@ -161,6 +161,62 @@ impl<'a> Lexer<'a> {
     /// Returns next string Token
     fn next_string(&mut self) -> Option<Token> {
         self.set_string();
+        // ' or "
+        #[allow(unused_assignments)]
+        let mut start_char = '\0';
+
+        loop {
+            if let Some(ch) = self.src.next() {
+                if self.is_src_space(ch) {
+                    continue;
+                } else if (ch == '\'') || (ch == '"') {
+                    start_char = ch;
+                    break;
+                } else {
+                    // expeced ' or "
+                    self.set_error();
+                    return None;
+                }
+
+            } else {
+                self.set_error();
+                return None;
+            }
+        }
+
+        loop {
+            if let Some(ch) = self.src.next() {
+                if ch == '\\' {
+                    if self.last_char == '\\' {
+                        self.buffer.push(ch);
+                        self.last_char('\0');
+                    } else {
+                        // escape for next character
+                        self.last_char(ch);
+                    }
+                } else if ch == start_char {
+                    if self.last_char == '\\' {
+                        self.buffer.push(ch);
+                        self.last_char('\0');
+                    } else {
+                        // string terminated
+                        let token = get_string_token(self.buffer.as_ref());
+                        self.reset_buffer();
+                        // correct ?
+                        self.set_ident();
+                        return Some(token);
+                    }
+                } else {
+                    self.buffer.push(ch);
+                    self.last_char(ch);
+                }
+            } else {
+                // unterminated string
+                self.set_error();
+                break;
+            }
+        }
+
         None
     }
 }
@@ -178,7 +234,6 @@ impl<'a> Iterator for Lexer<'a> {
 }
 
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,6 +243,8 @@ mod tests {
         let mut lx = Lexer::new("bEgin with literally \"a\" exactly twice");
         let token1 = lx.next_identifier().unwrap();
         let token2 = lx.next_identifier().unwrap();
+        assert_eq!(token1.val(), "begin with");
+        assert_eq!(token2.val(), "literally");
         assert!(match token1.token_type() {
             TokenType::BeginWith => true,
             _ => false,
@@ -196,5 +253,31 @@ mod tests {
             TokenType::Literally => true,
             _ => false,
         });
+    }
+
+    #[test]
+    fn test_next_string() {
+        let mut lx = Lexer::new("\"first string\" 'second' \"esca\\\"ped1\" 'escaped\\'2'");
+        let token1 = lx.next_string().unwrap();
+        assert_eq!(token1.val(), "first string");
+        assert!(match token1.token_type() {
+            TokenType::String => true,
+            _ => false,
+        });
+        let token2 = lx.next_string().unwrap();
+        assert_eq!(token2.val(), "second");
+
+        let token3 = lx.next_string().unwrap();
+        assert_eq!(token3.val(), "esca\"ped1");
+
+        let token4 = lx.next_string().unwrap();
+        assert_eq!(token4.val(), "escaped'2");
+
+        lx.next_string();
+        assert!(lx.is_error());
+
+        let mut lx2 = Lexer::new("\"unterminated ");
+        lx2.next_string();
+        assert!(lx2.is_error());
     }
 }

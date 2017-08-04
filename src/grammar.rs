@@ -46,11 +46,7 @@ lazy_static! {
         table.insert("starts with", TokenType::BeginWith);
         table.insert("must end", TokenType::MustEnd);
 
-        table.insert(",", TokenType::Space);
-        table.insert(" ", TokenType::Space);
         table.insert("\n", TokenType::Space);
-        table.insert("\"", TokenType::String);
-        table.insert("\'", TokenType::String);
         table.insert("(", TokenType::GroupStart);
         table.insert(")", TokenType::GroupEnd);
         table.insert("eof", TokenType::EndOfFile);
@@ -67,6 +63,7 @@ pub fn get_token<'a>(token: &'a str) -> Option<Token> {
     )
 }
 
-pub fn eof() -> Token {
-    Token::new("", TokenType::EndOfFile)
+
+pub fn get_string_token(val: &str) -> Token {
+   Token::new(val, TokenType::String)
 }
