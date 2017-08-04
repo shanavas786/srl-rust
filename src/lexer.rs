@@ -12,7 +12,6 @@ enum State {
     Lookaround,
     Flag,
     Anchor,
-    SrcWhitespace,
     SrcNumber,
     SrcString,
     Delimiter,
@@ -24,7 +23,7 @@ enum State {
 
     None,
     EndOfFile,
-    Error
+    Error,
 }
 
 pub struct Lexer<'a> {
@@ -40,7 +39,7 @@ impl<'a> Lexer<'a> {
             src: src.chars().peekable(),
             buffer: String::new(),
             last_char: ' ',
-            state: State::None
+            state: State::None,
         }
     }
 
@@ -58,9 +57,13 @@ impl<'a> Lexer<'a> {
     fn next_state(&mut self, token: &Token) {
         // TODO may require last token to reduce number of states
         match token.token_type() {
-            TokenType::BeginWith => { self.set_ident() },
-            TokenType::Raw => { self.set_string() },
-            _ => {},
+            TokenType::BeginWith |
+            TokenType::Letter |
+            TokenType::UppercaseLetter |
+            TokenType::AnyCharacter |
+            TokenType::NoCharacter => self.set_ident(),
+            TokenType::Raw | TokenType::Literally | TokenType::OneOf => self.set_string(),
+            _ => {}
         }
     }
 
@@ -100,9 +103,9 @@ impl<'a> Lexer<'a> {
             ' ' => {
                 // skip space if buffer is empty or last char is space
                 self.is_ident() && (self.buffer.is_empty() || self.last_char == ' ')
-            },
-            ',' | '\n' | '\t' => { self.is_ident() && self.buffer.is_empty() },
-            _ => { false }
+            }
+            ',' | '\n' | '\t' => self.is_ident() && self.buffer.is_empty(),
+            _ => false,
         }
     }
 
@@ -129,7 +132,6 @@ impl<'a> Lexer<'a> {
                 } else if self.is_token_whitespace(ch) {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
-                        // TODO set next state
                         self.reset_buffer();
                         self.next_state(&token);
                         return Some(token);
@@ -155,6 +157,12 @@ impl<'a> Lexer<'a> {
         }
         None
     }
+
+    /// Returns next string Token
+    fn next_string(&mut self) -> Option<Token> {
+        self.set_string();
+        None
+    }
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -162,8 +170,31 @@ impl<'a> Iterator for Lexer<'a> {
 
     fn next(&mut self) -> Option<Token> {
         match self.state {
-            State::None | State::Identifier => { self.next_identifier() },
-            _ => { None },
+            State::None | State::Identifier => self.next_identifier(),
+            State::String => self.next_string(),
+            _ => None,
         }
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_next_identifier() {
+        let mut lx = Lexer::new("bEgin with literally \"a\" exactly twice");
+        let token1 = lx.next_identifier().unwrap();
+        let token2 = lx.next_identifier().unwrap();
+        assert!(match token1.token_type() {
+            TokenType::BeginWith => true,
+            _ => false,
+        });
+        assert!(match token2.token_type() {
+            TokenType::Literally => true,
+            _ => false,
+        });
     }
 }

@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use token::{Token, TokenType };
+use token::{Token, TokenType};
 
 lazy_static! {
     static ref GRAMMAR_TABLE: HashMap<&'static str, TokenType> = {
@@ -62,9 +62,9 @@ lazy_static! {
 pub const MAX_SPC_INDEX: usize = 15;
 
 pub fn get_token<'a>(token: &'a str) -> Option<Token> {
-    GRAMMAR_TABLE.get(token).and_then(|tk| {
-        Some(Token::new(token, *tk))
-    })
+    GRAMMAR_TABLE.get(token).and_then(
+        |tk| Some(Token::new(token, *tk)),
+    )
 }
 
 pub fn eof() -> Token {
