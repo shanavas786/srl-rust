@@ -20,14 +20,14 @@ lazy_static! {
         table.insert("from", TokenType::From);
         table.insert("to", TokenType::To);
 
-        table.insert("exactly", TokenType::ExcatlyXTimes);
+        table.insert("exactly", TokenType::Exactly);
         table.insert("once", TokenType::Once);
         table.insert("twice", TokenType::Twice);
-        table.insert("between", TokenType::BetweenXAndYTimes);
+        table.insert("between", TokenType::Between);
         table.insert("optional", TokenType::Optional);
         table.insert("once or more", TokenType::OnceOrMore);
         table.insert("never or more", TokenType::NeverOrMore);
-        table.insert("at least", TokenType::AtLeastXTimes);
+        table.insert("at least", TokenType::AtLeast);
         table.insert("and", TokenType::And);
         table.insert("capture", TokenType::CaptureAs);
         table.insert("any of", TokenType::AnyOf);
@@ -46,7 +46,6 @@ lazy_static! {
         table.insert("starts with", TokenType::BeginWith);
         table.insert("must end", TokenType::MustEnd);
 
-        table.insert("\n", TokenType::Space);
         table.insert("(", TokenType::GroupStart);
         table.insert(")", TokenType::GroupEnd);
         table.insert("eof", TokenType::EndOfFile);
@@ -63,7 +62,12 @@ pub fn get_token<'a>(token: &'a str) -> Option<Token> {
     )
 }
 
-
+// create a String token with given value
 pub fn get_string_token(val: &str) -> Token {
     Token::new(val, TokenType::String)
+}
+
+// create a Number token with given value
+pub fn get_number_token(val: &str) -> Token {
+    Token::new(val, TokenType::Number)
 }

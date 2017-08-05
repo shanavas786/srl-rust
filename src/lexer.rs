@@ -1,13 +1,14 @@
 use std::str::Chars;
 use std::iter::Peekable;
 use token::{Token, TokenType};
-use grammar::{MAX_SPC_INDEX, get_token, get_string_token};
+use grammar::{MAX_SPC_INDEX, get_token, get_string_token, get_number_token};
 use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
 enum State {
     Identifier,
     String,
+    Number,
 
     None,
     EndOfFile,
@@ -49,8 +50,11 @@ impl<'a> Lexer<'a> {
             TokenType::Letter |
             TokenType::UppercaseLetter |
             TokenType::AnyCharacter |
+            TokenType::Digit |
+            TokenType::Number |
             TokenType::NoCharacter => self.set_ident(),
             TokenType::Raw | TokenType::Literally | TokenType::OneOf => self.set_string(),
+            TokenType::Exactly | TokenType::Between => self.set_number(),
             _ => {}
         }
     }
@@ -73,6 +77,16 @@ impl<'a> Lexer<'a> {
     /// sets string state
     fn is_string(&self) -> bool {
         self.state == State::String
+    }
+
+    /// sets number state
+    fn set_number(&mut self) {
+        self.state = State::Number
+    }
+
+    /// check number state
+    fn is_number(&self) -> bool {
+        self.state == State::Number
     }
 
     /// sets identifer state
@@ -98,7 +112,7 @@ impl<'a> Lexer<'a> {
                 // skip space if buffer is empty or last char is space
                 if self.is_ident() {
                     (self.buffer.is_empty() || self.last_char == ' ')
-                } else if self.is_string() {
+                } else if self.is_string() || self.is_number() {
                     self.buffer.is_empty()
                 } else {
                     false
@@ -109,9 +123,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    /// checks if ch is one of whitespace chars allowed in token
-    /// eg: any\nof is a valid identifier
-    fn is_token_whitespace(&self, ch: char) -> bool {
+    /// checks if ch is one of whitespace chars
+    fn is_whitespace_char(&self, ch: char) -> bool {
         (ch == ' ') || (ch == ',') || (ch == '\n') || (ch == '\t')
     }
 
@@ -129,7 +142,7 @@ impl<'a> Lexer<'a> {
                     // identifiers are case insensitive
                     self.buffer.push(ch.to_ascii_lowercase());
                     self.last_char(ch);
-                } else if self.is_token_whitespace(ch) {
+                } else if self.is_whitespace_char(ch) {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
                         self.reset_buffer();
@@ -219,6 +232,31 @@ impl<'a> Lexer<'a> {
 
         None
     }
+
+    // Returns next number token
+    fn next_number(&mut self) -> Option<Token> {
+        self.set_number();
+
+        loop {
+            if let Some(ch) = self.src.next() {
+                if self.is_src_space(ch) {
+                    continue;
+                } else if ch.is_digit(10) {
+                    self.buffer.push(ch);
+                } else if self.is_whitespace_char(ch) {
+                    // number ends
+                    let token = get_number_token(self.buffer.as_ref());
+                    self.next_state(&token);
+                    self.reset_buffer();
+                    self.last_char(' ');
+                    return Some(token);
+                }
+            } else {
+                self.set_error();
+                return None;
+            }
+        }
+    }
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -228,6 +266,7 @@ impl<'a> Iterator for Lexer<'a> {
         match self.state {
             State::None | State::Identifier => self.next_identifier(),
             State::String => self.next_string(),
+            State::Number => self.next_number(),
             _ => None,
         }
     }
@@ -279,5 +318,23 @@ mod tests {
         let mut lx2 = Lexer::new("\"unterminated ");
         lx2.next_string();
         assert!(lx2.is_error());
+    }
+
+
+    #[test]
+    fn test_next_number() {
+        let mut lx = Lexer::new("112 28, 28a");
+        let token1 = lx.next_number().unwrap();
+        assert_eq!(token1.val(), "112");
+        assert!(match token1.token_type() {
+            TokenType::Number => true,
+            _ => false,
+        });
+
+        let token2 = lx.next_number().unwrap();
+        assert_eq!(token2.val(), "28");
+
+        lx.next_number();
+        assert!(lx.is_error());
     }
 }
