@@ -65,5 +65,5 @@ pub fn get_token<'a>(token: &'a str) -> Option<Token> {
 
 
 pub fn get_string_token(val: &str) -> Token {
-   Token::new(val, TokenType::String)
+    Token::new(val, TokenType::String)
 }
