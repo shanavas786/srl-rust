@@ -29,7 +29,8 @@ lazy_static! {
         table.insert("never or more", TokenType::NeverOrMore);
         table.insert("at least", TokenType::AtLeast);
         table.insert("and", TokenType::And);
-        table.insert("capture", TokenType::CaptureAs);
+        table.insert("capture", TokenType::Capture);
+        table.insert("as", TokenType::As);
         table.insert("any of", TokenType::AnyOf);
         table.insert("until", TokenType::Until);
 
@@ -70,4 +71,9 @@ pub fn get_string_token(val: &str) -> Token {
 // create a Number token with given value
 pub fn get_number_token(val: &str) -> Token {
     Token::new(val, TokenType::Number)
+}
+
+// create a EndOfFile token
+pub fn get_eof_token() -> Token {
+    Token::new("eof", TokenType::EndOfFile)
 }

@@ -28,10 +28,10 @@ pub enum TokenType {
     Times,
     And,
 
-    CaptureAs,
+    Capture,
+    As,
     AnyOf,
     Until,
-    As,
 
     IfFollowedBy,
     IfNotFollowedBy,

@@ -1,7 +1,7 @@
 use std::str::Chars;
 use std::iter::Peekable;
 use token::{Token, TokenType};
-use grammar::{MAX_SPC_INDEX, get_token, get_string_token, get_number_token};
+use grammar::{MAX_SPC_INDEX, get_token, get_string_token, get_number_token, get_eof_token};
 use std::ascii::AsciiExt;
 
 #[derive(PartialEq)]
@@ -47,17 +47,12 @@ impl<'a> Lexer<'a> {
     fn next_state(&mut self, token: &Token) {
         // TODO may require last token to reduce number of states
         match token.token_type() {
-            TokenType::BeginWith |
-            TokenType::Letter |
-            TokenType::UppercaseLetter |
-            TokenType::AnyCharacter |
-            TokenType::Digit |
-            TokenType::Number |
-            TokenType::NoCharacter => self.set_ident(),
-            TokenType::Raw | TokenType::Literally | TokenType::OneOf => self.set_string(),
+            TokenType::Raw | TokenType::Literally | TokenType::OneOf | TokenType::As => {
+                self.set_string()
+            }
             TokenType::Exactly | TokenType::Between | TokenType::And => self.set_number(),
             TokenType::From | TokenType::To => self.set_char_or_digit(),
-            _ => {}
+            _ => self.set_ident(),
         }
     }
 
@@ -149,6 +144,9 @@ impl<'a> Lexer<'a> {
                     // identifiers are case insensitive
                     self.buffer.push(ch.to_ascii_lowercase());
                     self.last_char(ch);
+                } else if ch == '(' && self.buffer.is_empty() {
+                    self.last_char(' ');
+                    return get_token("(");
                 } else if self.is_whitespace_char(ch) || ch == ')' {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
@@ -158,7 +156,7 @@ impl<'a> Lexer<'a> {
                             // part of next token
                             self.buffer.push(ch);
                         }
-                        self.last_char(' ');
+                        self.last_char('\0');
                         return Some(token);
                     } else if (self.buffer.len() < MAX_SPC_INDEX) && (ch != ')') {
                         // add space to token
@@ -175,9 +173,18 @@ impl<'a> Lexer<'a> {
                     break;
                 }
             } else {
-                // check buffer is valid token else set err state
-                self.set_eof();
-                break;
+                if self.buffer.is_empty() {
+                    self.set_eof();
+                    return Some(get_eof_token());
+                } else if let Some(token) = get_token(&self.buffer) {
+                    // valid token !!
+                    self.reset_buffer();
+                    return Some(token);
+                } else {
+                    // unexpected eof
+                    self.set_error();
+                    break;
+                }
             }
         }
         None
@@ -299,17 +306,53 @@ mod tests {
 
     #[test]
     fn test_next_identifier() {
-        let mut lx = Lexer::new("bEgin with literally \"a\" exactly twice");
+        let mut lx = Lexer::new("bEgin with capture (letter) twice");
         let token1 = lx.next_identifier().unwrap();
-        let token2 = lx.next_identifier().unwrap();
         assert_eq!(token1.val(), "begin with");
-        assert_eq!(token2.val(), "literally");
         assert!(match token1.token_type() {
             TokenType::BeginWith => true,
             _ => false,
         });
+
+        let token2 = lx.next_identifier().unwrap();
+        assert_eq!(token2.val(), "capture");
         assert!(match token2.token_type() {
-            TokenType::Literally => true,
+            TokenType::Capture => true,
+            _ => false,
+        });
+
+        let token3 = lx.next_identifier().unwrap();
+        assert_eq!(token3.val(), "(");
+        assert!(match token3.token_type() {
+            TokenType::GroupStart => true,
+            _ => false,
+        });
+
+        let token4 = lx.next_identifier().unwrap();
+        assert_eq!(token4.val(), "letter");
+        assert!(match token4.token_type() {
+            TokenType::Letter => true,
+            _ => false,
+        });
+
+        let token5 = lx.next_identifier().unwrap();
+        assert_eq!(token5.val(), ")");
+        assert!(match token5.token_type() {
+            TokenType::GroupEnd => true,
+            _ => false,
+        });
+
+        let token6 = lx.next_identifier().unwrap();
+        assert_eq!(token6.val(), "twice");
+        assert!(match token6.token_type() {
+            TokenType::Twice => true,
+            _ => false,
+        });
+
+        let token7 = lx.next_identifier().unwrap();
+        assert_eq!(token7.val(), "eof");
+        assert!(match token7.token_type() {
+            TokenType::EndOfFile => true,
             _ => false,
         });
     }
