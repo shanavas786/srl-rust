@@ -9,6 +9,7 @@ enum State {
     Identifier,
     String,
     Number,
+    CharOrDigit,
 
     None,
     EndOfFile,
@@ -54,7 +55,8 @@ impl<'a> Lexer<'a> {
             TokenType::Number |
             TokenType::NoCharacter => self.set_ident(),
             TokenType::Raw | TokenType::Literally | TokenType::OneOf => self.set_string(),
-            TokenType::Exactly | TokenType::Between => self.set_number(),
+            TokenType::Exactly | TokenType::Between | TokenType::And => self.set_number(),
+            TokenType::From | TokenType::To => self.set_char_or_digit(),
             _ => {}
         }
     }
@@ -87,6 +89,11 @@ impl<'a> Lexer<'a> {
     /// check number state
     fn is_number(&self) -> bool {
         self.state == State::Number
+    }
+
+    /// set char_or_digit state
+    fn set_char_or_digit(&mut self) {
+        self.state = State::CharOrDigit
     }
 
     /// sets identifer state
@@ -142,13 +149,18 @@ impl<'a> Lexer<'a> {
                     // identifiers are case insensitive
                     self.buffer.push(ch.to_ascii_lowercase());
                     self.last_char(ch);
-                } else if self.is_whitespace_char(ch) {
+                } else if self.is_whitespace_char(ch) || ch == ')' {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
                         self.reset_buffer();
                         self.next_state(&token);
+                        if ch == ')' {
+                            // part of next token
+                            self.buffer.push(ch);
+                        }
+                        self.last_char(' ');
                         return Some(token);
-                    } else if self.buffer.len() < MAX_SPC_INDEX {
+                    } else if (self.buffer.len() < MAX_SPC_INDEX) && (ch != ')') {
                         // add space to token
                         self.buffer.push(' ');
                         self.last_char(' ');
@@ -257,6 +269,13 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+
+    /// Returns next char or digit
+    fn next_char_or_digit(&mut self) -> Option<Token> {
+        self.set_char_or_digit();
+        unimplemented!();
+    }
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -267,6 +286,7 @@ impl<'a> Iterator for Lexer<'a> {
             State::None | State::Identifier => self.next_identifier(),
             State::String => self.next_string(),
             State::Number => self.next_number(),
+            State::CharOrDigit => self.next_char_or_digit(),
             _ => None,
         }
     }
