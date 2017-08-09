@@ -6,6 +6,7 @@ pub enum TokenType {
     UppercaseLetter,
     AnyCharacter,
     NoCharacter,
+    Character,
     Digit,
     Anything,
     NewLine,

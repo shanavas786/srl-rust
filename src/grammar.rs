@@ -73,6 +73,16 @@ pub fn get_number_token(val: &str) -> Token {
     Token::new(val, TokenType::Number)
 }
 
+// create a character token with given value
+pub fn get_char_token(val: &str) -> Token {
+    Token::new(val, TokenType::Character)
+}
+
+// create a digit token with given value
+pub fn get_digit_token(val: &str) -> Token {
+    Token::new(val, TokenType::Digit)
+}
+
 // create a EndOfFile token
 pub fn get_eof_token() -> Token {
     Token::new("eof", TokenType::EndOfFile)
