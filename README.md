@@ -1,4 +1,5 @@
 # SRL-RUST
+[![Travis Status](https://travis-ci.org/shanavas786/srl-rust.svg?branch=master)](https://travis-ci.org/shanavas786/srl-rust)
 
 Rust implementation of [Simple Regex](https://simple-regex.com/) :tada::tada::tada:
 
