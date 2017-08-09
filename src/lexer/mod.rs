@@ -4,6 +4,8 @@ use token::{Token, TokenType};
 use grammar::{MAX_SPC_INDEX, get_token, get_string_token, get_number_token, get_eof_token,
               get_char_token, get_digit_token};
 use std::ascii::AsciiExt;
+mod srlchar;
+use self::srlchar::SrlChar;
 
 #[derive(PartialEq)]
 enum State {
@@ -35,7 +37,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// sets last char to ch
-    fn last_char(&mut self, ch: char) {
+    fn set_last_char(&mut self, ch: char) {
         self.last_char = ch;
     }
 
@@ -46,7 +48,7 @@ impl<'a> Lexer<'a> {
 
     /// set next state
     fn next_state(&mut self, token: &Token) {
-        // TODO may require last token to reduce number of states
+        // TODO capture and until takes string or identifier
         match token.token_type() {
             TokenType::Raw | TokenType::Literally | TokenType::OneOf | TokenType::As => {
                 self.set_string()
@@ -55,11 +57,6 @@ impl<'a> Lexer<'a> {
             TokenType::From | TokenType::To => self.set_char_or_digit(),
             _ => self.set_ident(),
         }
-    }
-
-    /// check if lexer is in Identifier state
-    fn is_ident(&self) -> bool {
-        self.state == State::Identifier
     }
 
     /// sets identifer state
@@ -72,29 +69,14 @@ impl<'a> Lexer<'a> {
         self.state = State::String
     }
 
-    /// sets string state
-    fn is_string(&self) -> bool {
-        self.state == State::String
-    }
-
     /// sets number state
     fn set_number(&mut self) {
         self.state = State::Number
     }
 
-    /// check number state
-    fn is_number(&self) -> bool {
-        self.state == State::Number
-    }
-
     /// set char_or_digit state
     fn set_char_or_digit(&mut self) {
         self.state = State::CharOrDigit
-    }
-
-    /// check char_or_digit state
-    fn is_char_or_digit(&self) -> bool {
-        self.state == State::CharOrDigit
     }
 
     /// sets identifer state
@@ -113,27 +95,8 @@ impl<'a> Lexer<'a> {
         self.state = State::Error
     }
 
-    /// Checks if char is src whitespace
-    fn is_src_space(&mut self, ch: char) -> bool {
-        match ch {
-            ' ' => {
-                // skip space if buffer is empty or last char is space
-                if self.is_ident() {
-                    (self.buffer.is_empty() || self.last_char == ' ')
-                } else if self.is_string() || self.is_number() || self.is_char_or_digit() {
-                    self.buffer.is_empty()
-                } else {
-                    false
-                }
-            }
-            ',' | '\n' | '\t' => self.is_ident() && self.buffer.is_empty(),
-            _ => false,
-        }
-    }
-
-    /// checks if ch is one of whitespace chars
-    fn is_whitespace_char(&self, ch: char) -> bool {
-        (ch == ' ') || (ch == ',') || (ch == '\n') || (ch == '\t')
+    fn skip_space(&self)-> bool {
+        self.buffer.is_empty() || self.last_char.is_space()
     }
 
     /// Returns next identifier Token
@@ -142,32 +105,32 @@ impl<'a> Lexer<'a> {
 
         loop {
             if let Some(ch) = self.src.next() {
-                if self.is_src_space(ch) {
+                if self.skip_space() && ch.is_srl_whitespace() {
                     continue;
                 }
 
                 if ch.is_ascii() && ch.is_alphabetic() {
                     // identifiers are case insensitive
                     self.buffer.push(ch.to_ascii_lowercase());
-                    self.last_char(ch);
-                } else if ch == '(' && self.buffer.is_empty() {
-                    self.last_char(' ');
+                    self.set_last_char(ch);
+                } else if ch.is_group_start() && self.buffer.is_empty() {
+                    self.set_last_char(' ');
                     return get_token("(");
-                } else if self.is_whitespace_char(ch) || ch == ')' {
+                } else if ch.is_srl_whitespace() || ch.is_group_end() {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
                         self.reset_buffer();
                         self.next_state(&token);
-                        if ch == ')' {
+                        if ch.is_group_end() {
                             // part of next token
                             self.buffer.push(ch);
                         }
-                        self.last_char('\0');
+                        self.set_last_char('\0');
                         return Some(token);
                     } else if (self.buffer.len() < MAX_SPC_INDEX) && (ch != ')') {
                         // add space to token
                         self.buffer.push(' ');
-                        self.last_char(' ');
+                        self.set_last_char(' ');
                     } else {
                         // invalid identifier
                         self.set_error();
@@ -205,9 +168,9 @@ impl<'a> Lexer<'a> {
 
         loop {
             if let Some(ch) = self.src.next() {
-                if self.is_src_space(ch) {
+                if ch.is_srl_whitespace() {
                     continue;
-                } else if (ch == '\'') || (ch == '"') {
+                } else if ch.is_quote() {
                     start_char = ch;
                     break;
                 } else {
@@ -224,29 +187,28 @@ impl<'a> Lexer<'a> {
 
         loop {
             if let Some(ch) = self.src.next() {
-                if ch == '\\' {
-                    if self.last_char == '\\' {
+                if ch.is_backslash() {
+                    if self.last_char.is_backslash() {
                         self.buffer.push(ch);
-                        self.last_char('\0');
+                        self.set_last_char('\0');
                     } else {
                         // escape for next character
-                        self.last_char(ch);
+                        self.set_last_char(ch);
                     }
                 } else if ch == start_char {
-                    if self.last_char == '\\' {
+                    if self.last_char.is_backslash() {
                         self.buffer.push(ch);
-                        self.last_char('\0');
+                        self.set_last_char('\0');
                     } else {
                         // string terminated
                         let token = get_string_token(self.buffer.as_ref());
                         self.reset_buffer();
-                        // correct ?
-                        self.set_ident();
+                        self.next_state(&token);
                         return Some(token);
                     }
                 } else {
                     self.buffer.push(ch);
-                    self.last_char(ch);
+                    self.set_last_char(ch);
                 }
             } else {
                 // unterminated string
@@ -264,16 +226,17 @@ impl<'a> Lexer<'a> {
 
         loop {
             if let Some(ch) = self.src.next() {
-                if self.is_src_space(ch) {
+                if self.skip_space() && ch.is_srl_whitespace() {
                     continue;
                 } else if ch.is_digit(10) {
                     self.buffer.push(ch);
-                } else if self.is_whitespace_char(ch) {
+                    self.set_last_char(ch);
+                } else if ch.is_srl_whitespace() {
                     // number ends
                     let token = get_number_token(self.buffer.as_ref());
                     self.next_state(&token);
                     self.reset_buffer();
-                    self.last_char(' ');
+                    self.set_last_char(' ');
                     return Some(token);
                 } else {
                     // invalid char in number
@@ -289,7 +252,7 @@ impl<'a> Lexer<'a> {
                     let token = get_number_token(self.buffer.as_ref());
                     self.next_state(&token);
                     self.reset_buffer();
-                    self.last_char(' ');
+                    self.set_last_char(' ');
                     return Some(token);
                 }
             }
@@ -302,7 +265,7 @@ impl<'a> Lexer<'a> {
         self.set_char_or_digit();
         loop {
             if let Some(ch) = self.src.next() {
-                if self.is_src_space(ch) {
+                if ch.is_srl_whitespace() {
                     continue;
                 } else if ch.is_ascii() && ch.is_digit(10) {
                     self.buffer.push(ch);
