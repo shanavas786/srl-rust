@@ -48,15 +48,20 @@ impl<'a> Lexer<'a> {
 
     /// set next state
     fn next_state(&mut self, token: &Token) {
-        // TODO capture and until takes string or identifier
         match token.token_type() {
             TokenType::Raw | TokenType::Literally | TokenType::OneOf | TokenType::As => {
                 self.set_string()
             }
             TokenType::Exactly | TokenType::Between | TokenType::And => self.set_number(),
             TokenType::From | TokenType::To => self.set_char_or_digit(),
+            TokenType::Capture | TokenType::Until => self.set_none(),
             _ => self.set_ident(),
         }
+    }
+
+    /// sets none state
+    fn set_none(&mut self) {
+        self.state = State::None
     }
 
     /// sets identifer state
@@ -95,7 +100,7 @@ impl<'a> Lexer<'a> {
         self.state = State::Error
     }
 
-    fn skip_space(&self)-> bool {
+    fn skip_space(&self) -> bool {
         self.buffer.is_empty() || self.last_char.is_space()
     }
 
@@ -116,18 +121,18 @@ impl<'a> Lexer<'a> {
                 } else if ch.is_group_start() && self.buffer.is_empty() {
                     self.set_last_char(' ');
                     return get_token("(");
-                } else if ch.is_srl_whitespace() || ch.is_group_end() {
+                } else if ch.is_srl_whitespace() || ch.is_group_char() {
                     if let Some(token) = get_token(&self.buffer) {
                         // valid token !!
                         self.reset_buffer();
                         self.next_state(&token);
-                        if ch.is_group_end() {
+                        if ch.is_group_char() {
                             // part of next token
                             self.buffer.push(ch);
                         }
                         self.set_last_char('\0');
                         return Some(token);
-                    } else if (self.buffer.len() < MAX_SPC_INDEX) && (ch != ')') {
+                    } else if self.buffer.len() < MAX_SPC_INDEX  {
                         // add space to token
                         self.buffer.push(' ');
                         self.set_last_char(' ');
@@ -271,11 +276,13 @@ impl<'a> Lexer<'a> {
                     self.buffer.push(ch);
                     let token = get_digit_token(self.buffer.as_ref());
                     self.reset_buffer();
+                    self.set_ident();
                     return Some(token);
                 } else if ch.is_ascii() && ch.is_alphabetic() {
                     self.buffer.push(ch);
                     let token = get_char_token(self.buffer.as_ref());
                     self.reset_buffer();
+                    self.set_ident();
                     return Some(token);
                 } else {
                     // unexpected char
@@ -288,14 +295,55 @@ impl<'a> Lexer<'a> {
             }
         }
     }
+
+    fn next_token(&mut self) -> Option<Token> {
+        loop {
+            let ch = *self.src.peek().unwrap_or(&'\0');
+            if ch.is_srl_whitespace() {
+                self.src.next();
+                continue;
+            }
+
+            if ch.is_quote() {
+                return self.next_string();
+            }
+
+            if (ch.is_ascii() && ch.is_alphabetic()) || ch.is_group_char() {
+                return self.next_identifier();
+            }
+
+            if ch.is_digit(10) {
+                return self.next_number();
+            }
+
+            if ch == '\0' {
+                return Some(get_eof_token());
+            }
+
+            self.set_error();
+            return None;
+        }
+    }
 }
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
+    /// Returns next token
+    ///
+    /// # Examples
+    /// ```
+    /// use srl::lexer::Lexer;
+    ///
+    /// let mut lx = Lexer::new("bEgin with letter from a to k twice");
+    /// assert!(lx.next().is_some());
+    /// assert!(lx.next().is_some());
+    /// assert!(lx.next().is_some());
+    /// ```
     fn next(&mut self) -> Option<Token> {
         match self.state {
-            State::None | State::Identifier => self.next_identifier(),
+            State::None => self.next_token(),
+            State::Identifier => self.next_identifier(),
             State::String => self.next_string(),
             State::Number => self.next_number(),
             State::CharOrDigit => self.next_char_or_digit(),

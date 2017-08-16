@@ -141,3 +141,115 @@ fn test_next_char_or_digit() {
         _ => false,
     });
 }
+
+#[test]
+fn test_next_token() {
+    let mut lx = Lexer::new("capture \"test\" capture ( letter from a to k twice )");
+
+    lx.next();
+
+    let tk1 = lx.next_token().unwrap();
+    assert_eq!(tk1.val(), "test");
+    assert!(match tk1.token_type() {
+        TokenType::String => true,
+        _ => false,
+    });
+
+    lx.next();
+
+    let tk2 = lx.next_token().unwrap();
+    assert_eq!(tk2.val(), "(");
+    assert!(match tk2.token_type() {
+        TokenType::GroupStart => true,
+        _ => false,
+    });
+
+}
+
+#[test]
+fn test_lexer_iter() {
+    let mut lx = Lexer::new("bEgin with capture \"test\" capture ( letter from a to k twice)");
+    let tk1 = lx.next().unwrap();
+    assert_eq!(tk1.val(), "begin with");
+    assert!(match tk1.token_type() {
+        TokenType::BeginWith => true,
+        _ => false,
+    });
+
+    let tk2 = lx.next().unwrap();
+    assert_eq!(tk2.val(), "capture");
+    assert!(match tk2.token_type() {
+        TokenType::Capture => true,
+        _ => false,
+    });
+
+    let tk3 = lx.next().unwrap();
+    assert_eq!(tk3.val(), "test");
+    assert!(match tk3.token_type() {
+        TokenType::String => true,
+        _ => false,
+    });
+
+    let tk4 = lx.next().unwrap();
+    assert_eq!(tk4.val(), "capture");
+    assert!(match tk2.token_type() {
+        TokenType::Capture => true,
+        _ => false,
+    });
+
+    let tk5 = lx.next().unwrap();
+    assert_eq!(tk5.val(), "(");
+    assert!(match tk5.token_type() {
+        TokenType::GroupStart => true,
+        _ => false,
+    });
+
+    let tk6 = lx.next().unwrap();
+    assert_eq!(tk6.val(), "letter");
+    assert!(match tk6.token_type() {
+        TokenType::Letter => true,
+        _ => false,
+    });
+
+    let tk7 = lx.next().unwrap();
+    assert_eq!(tk7.val(), "from");
+    assert!(match tk7.token_type() {
+        TokenType::From => true,
+        _ => false,
+    });
+
+    let tk8 = lx.next().unwrap();
+    assert_eq!(tk8.val(), "a");
+    assert!(match tk8.token_type() {
+        TokenType::Character => true,
+        _ => false,
+    });
+
+    let tk9 = lx.next().unwrap();
+    assert_eq!(tk9.val(), "to");
+    assert!(match tk9.token_type() {
+        TokenType::To => true,
+        _ => false,
+    });
+
+    let tk10 = lx.next().unwrap();
+    assert_eq!(tk10.val(), "k");
+    assert!(match tk10.token_type() {
+        TokenType::Character => true,
+        _ => false,
+    });
+
+    let tk11 = lx.next().unwrap();
+    assert_eq!(tk11.val(), "twice");
+    assert!(match tk11.token_type() {
+        TokenType::Twice => true,
+        _ => false,
+    });
+
+    let tk12 = lx.next().unwrap();
+    assert_eq!(tk12.val(), ")");
+    assert!(match tk12.token_type() {
+        TokenType::GroupEnd => true,
+        _ => false,
+    });
+}
