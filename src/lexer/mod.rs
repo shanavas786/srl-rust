@@ -9,13 +9,15 @@ use self::srlchar::SrlChar;
 
 #[derive(PartialEq)]
 enum State {
+    None,
+
     Identifier,
     String,
     Number,
     CharOrDigit,
-
-    None,
     EndOfFile,
+
+    Done,
     Error,
 }
 
@@ -89,6 +91,11 @@ impl<'a> Lexer<'a> {
         self.state = State::EndOfFile
     }
 
+    /// sets done state
+    fn set_done(&mut self) {
+        self.state = State::Done
+    }
+
     /// check error state
     #[allow(dead_code)]
     fn is_error(&self) -> bool {
@@ -151,7 +158,7 @@ impl<'a> Lexer<'a> {
                 }
             } else {
                 if self.buffer.is_empty() {
-                    self.set_eof();
+                    self.set_done();
                     return Some(get_eof_token());
                 } else if let Some(token) = get_token(self.buffer.as_ref()) {
                     // valid token !!
@@ -326,6 +333,7 @@ impl<'a> Lexer<'a> {
                 return None;
 
             } else {
+                self.set_done();
                 return Some(get_eof_token());
             }
         }
@@ -353,7 +361,10 @@ impl<'a> Iterator for Lexer<'a> {
             State::String => self.next_string(),
             State::Number => self.next_number(),
             State::CharOrDigit => self.next_char_or_digit(),
-            State::EndOfFile => Some(get_eof_token()),
+            State::EndOfFile => {
+                self.set_done();
+                Some(get_eof_token())
+            }
             _ => None,
         }
     }
