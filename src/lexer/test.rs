@@ -79,7 +79,6 @@ fn test_next_string() {
     assert!(lx2.is_error());
 }
 
-
 #[test]
 fn test_next_number() {
     let mut lx = Lexer::new("112 28, 282");
@@ -101,7 +100,6 @@ fn test_next_number() {
     lx2.next_number();
     assert!(lx2.is_error());
 }
-
 
 #[test]
 fn test_next_char_or_digit() {
@@ -144,7 +142,7 @@ fn test_next_char_or_digit() {
 
 #[test]
 fn test_next_token() {
-    let mut lx = Lexer::new("capture \"test\" capture ( letter from a to k twice )");
+    let mut lx = Lexer::new("capture \"test\" capture(letter from a to k twice)");
 
     lx.next();
 
@@ -168,7 +166,7 @@ fn test_next_token() {
 
 #[test]
 fn test_lexer_iter() {
-    let mut lx = Lexer::new("bEgin with capture \"test\" capture ( letter from a to k twice)");
+    let mut lx = Lexer::new("bEgin with capture \"test\" capture(letter from a to k twice)");
     let tk1 = lx.next().unwrap();
     assert_eq!(tk1.val(), "begin with");
     assert!(match tk1.token_type() {

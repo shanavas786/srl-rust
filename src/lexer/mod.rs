@@ -100,6 +100,7 @@ impl<'a> Lexer<'a> {
         self.state = State::Error
     }
 
+    /// checks if lexer should skip srl whitespace characters
     fn skip_space(&self) -> bool {
         self.buffer.is_empty() || self.last_char.is_space()
     }
@@ -109,30 +110,32 @@ impl<'a> Lexer<'a> {
         self.set_ident();
 
         loop {
-            if let Some(ch) = self.src.next() {
+            if let Some(&ch) = self.src.peek() {
                 if self.skip_space() && ch.is_srl_whitespace() {
+                    self.src.next();
                     continue;
                 }
 
                 if ch.is_ascii() && ch.is_alphabetic() {
                     // identifiers are case insensitive
                     self.buffer.push(ch.to_ascii_lowercase());
+                    self.src.next();
                     self.set_last_char(ch);
-                } else if ch.is_group_start() && self.buffer.is_empty() {
-                    self.set_last_char(' ');
-                    return get_token("(");
                 } else if ch.is_srl_whitespace() || ch.is_group_char() {
-                    if let Some(token) = get_token(&self.buffer) {
+                    if self.buffer.is_empty() {
+                        self.src.next();
+                        // group char
+                        self.set_last_char(ch);
+                        let token = get_token(&format!("{}", ch));
+                        return token;
+                    } else if let Some(token) = get_token(self.buffer.as_ref()) {
                         // valid token !!
                         self.reset_buffer();
+                        self.set_last_char(ch);
                         self.next_state(&token);
-                        if ch.is_group_char() {
-                            // part of next token
-                            self.buffer.push(ch);
-                        }
-                        self.set_last_char('\0');
                         return Some(token);
-                    } else if self.buffer.len() < MAX_SPC_INDEX  {
+                    } else if self.buffer.len() < MAX_SPC_INDEX {
+                        self.src.next();
                         // add space to token
                         self.buffer.push(' ');
                         self.set_last_char(' ');
@@ -150,9 +153,10 @@ impl<'a> Lexer<'a> {
                 if self.buffer.is_empty() {
                     self.set_eof();
                     return Some(get_eof_token());
-                } else if let Some(token) = get_token(&self.buffer) {
+                } else if let Some(token) = get_token(self.buffer.as_ref()) {
                     // valid token !!
                     self.reset_buffer();
+                    self.set_eof();
                     return Some(token);
                 } else {
                     // unexpected eof
@@ -230,13 +234,15 @@ impl<'a> Lexer<'a> {
         self.set_number();
 
         loop {
-            if let Some(ch) = self.src.next() {
+            if let Some(&ch) = self.src.peek() {
                 if self.skip_space() && ch.is_srl_whitespace() {
+                    self.src.next();
                     continue;
                 } else if ch.is_digit(10) {
+                    self.src.next();
                     self.buffer.push(ch);
                     self.set_last_char(ch);
-                } else if ch.is_srl_whitespace() {
+                } else if ch.is_srl_whitespace() || ch.is_group_char() {
                     // number ends
                     let token = get_number_token(self.buffer.as_ref());
                     self.next_state(&token);
@@ -255,9 +261,8 @@ impl<'a> Lexer<'a> {
                 } else {
                     // number ends
                     let token = get_number_token(self.buffer.as_ref());
-                    self.next_state(&token);
                     self.reset_buffer();
-                    self.set_last_char(' ');
+                    self.set_eof();
                     return Some(token);
                 }
             }
@@ -296,32 +301,33 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Returns next Token
     fn next_token(&mut self) -> Option<Token> {
         loop {
-            let ch = *self.src.peek().unwrap_or(&'\0');
-            if ch.is_srl_whitespace() {
-                self.src.next();
-                continue;
-            }
+            if let Some(&ch) = self.src.peek() {
+                if ch.is_srl_whitespace() {
+                    self.src.next();
+                    continue;
+                }
 
-            if ch.is_quote() {
-                return self.next_string();
-            }
+                if ch.is_quote() {
+                    return self.next_string();
+                }
 
-            if (ch.is_ascii() && ch.is_alphabetic()) || ch.is_group_char() {
-                return self.next_identifier();
-            }
+                if (ch.is_ascii() && ch.is_alphabetic()) || ch.is_group_char() {
+                    return self.next_identifier();
+                }
 
-            if ch.is_digit(10) {
-                return self.next_number();
-            }
+                if ch.is_digit(10) {
+                    return self.next_number();
+                }
 
-            if ch == '\0' {
+                self.set_error();
+                return None;
+
+            } else {
                 return Some(get_eof_token());
             }
-
-            self.set_error();
-            return None;
         }
     }
 }
@@ -347,11 +353,11 @@ impl<'a> Iterator for Lexer<'a> {
             State::String => self.next_string(),
             State::Number => self.next_number(),
             State::CharOrDigit => self.next_char_or_digit(),
+            State::EndOfFile => Some(get_eof_token()),
             _ => None,
         }
     }
 }
-
 
 #[cfg(test)]
 mod test;
