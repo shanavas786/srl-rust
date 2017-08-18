@@ -1,5 +1,12 @@
 use super::*;
 
+impl<'a> Lexer<'a> {
+    /// check error state
+    fn is_error(&self) -> bool {
+        self.state == State::Error
+    }
+}
+
 #[test]
 fn test_next_identifier() {
     let mut lx = Lexer::new("bEgin with capture (letter) twice");

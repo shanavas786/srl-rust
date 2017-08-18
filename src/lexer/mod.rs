@@ -96,12 +96,6 @@ impl<'a> Lexer<'a> {
         self.state = State::Done
     }
 
-    /// check error state
-    #[allow(dead_code)]
-    fn is_error(&self) -> bool {
-        self.state == State::Error
-    }
-
     /// sets error state
     fn set_error(&mut self) {
         self.state = State::Error
@@ -116,123 +110,115 @@ impl<'a> Lexer<'a> {
     fn next_identifier(&mut self) -> Option<Token> {
         self.set_ident();
 
-        loop {
-            if let Some(&ch) = self.src.peek() {
-                if self.skip_space() && ch.is_srl_whitespace() {
-                    self.src.next();
-                    continue;
-                }
+        while let Some(&ch) = self.src.peek() {
+            if self.skip_space() && ch.is_srl_whitespace() {
+                self.src.next();
+                continue;
+            }
 
-                if ch.is_ascii() && ch.is_alphabetic() {
-                    // identifiers are case insensitive
-                    self.buffer.push(ch.to_ascii_lowercase());
-                    self.src.next();
-                    self.set_last_char(ch);
-                } else if ch.is_srl_whitespace() || ch.is_group_char() {
-                    if self.buffer.is_empty() {
-                        self.src.next();
-                        // group char
-                        self.set_last_char(ch);
-                        let token = get_token(&format!("{}", ch));
-                        return token;
-                    } else if let Some(token) = get_token(self.buffer.as_ref()) {
-                        // valid token !!
-                        self.reset_buffer();
-                        self.set_last_char(ch);
-                        self.next_state(&token);
-                        return Some(token);
-                    } else if self.buffer.len() < MAX_SPC_INDEX {
-                        self.src.next();
-                        // add space to token
-                        self.buffer.push(' ');
-                        self.set_last_char(' ');
-                    } else {
-                        // invalid identifier
-                        self.set_error();
-                        break;
-                    }
-                } else {
-                    // invalid char in identifier
-                    self.set_error();
-                    break;
-                }
-            } else {
+            if ch.is_ascii() && ch.is_alphabetic() {
+                // identifiers are case insensitive
+                self.buffer.push(ch.to_ascii_lowercase());
+                self.src.next();
+                self.set_last_char(ch);
+            } else if ch.is_srl_whitespace() || ch.is_group_char() {
                 if self.buffer.is_empty() {
-                    self.set_done();
-                    return Some(get_eof_token());
+                    self.src.next();
+                    // group char
+                    self.set_last_char(ch);
+                    let token = get_token(&format!("{}", ch));
+                    return token;
                 } else if let Some(token) = get_token(self.buffer.as_ref()) {
                     // valid token !!
                     self.reset_buffer();
-                    self.set_eof();
+                    self.set_last_char(ch);
+                    self.next_state(&token);
                     return Some(token);
+                } else if self.buffer.len() < MAX_SPC_INDEX {
+                    self.src.next();
+                    // add space to token
+                    self.buffer.push(' ');
+                    self.set_last_char(' ');
                 } else {
-                    // unexpected eof
+                    // invalid identifier
                     self.set_error();
-                    break;
+                    return None;
                 }
+            } else {
+                // invalid char in identifier
+                self.set_error();
+                return None;
             }
         }
-        None
+
+        if self.buffer.is_empty() {
+            self.set_done();
+            Some(get_eof_token())
+        } else if let Some(token) = get_token(self.buffer.as_ref()) {
+            // valid token !!
+            self.reset_buffer();
+            self.set_eof();
+            Some(token)
+        } else {
+            // unexpected eof
+            self.set_error();
+            None
+        }
     }
 
     /// Returns next string Token
     fn next_string(&mut self) -> Option<Token> {
         self.set_string();
         // ' or "
-        #[allow(unused_assignments)]
         let mut start_char = '\0';
 
-        loop {
-            if let Some(ch) = self.src.next() {
-                if ch.is_srl_whitespace() {
-                    continue;
-                } else if ch.is_quote() {
-                    start_char = ch;
-                    break;
-                } else {
-                    // expeced ' or "
-                    self.set_error();
-                    return None;
-                }
-
+        while let Some(ch) = self.src.next() {
+            if ch.is_srl_whitespace() {
+                continue;
+            } else if ch.is_quote() {
+                start_char = ch;
+                break;
             } else {
+                // expeced ' or "
                 self.set_error();
                 return None;
             }
+
         }
 
-        loop {
-            if let Some(ch) = self.src.next() {
-                if ch.is_backslash() {
-                    if self.last_char.is_backslash() {
-                        self.buffer.push(ch);
-                        self.set_last_char('\0');
-                    } else {
-                        // escape for next character
-                        self.set_last_char(ch);
-                    }
-                } else if ch == start_char {
-                    if self.last_char.is_backslash() {
-                        self.buffer.push(ch);
-                        self.set_last_char('\0');
-                    } else {
-                        // string terminated
-                        let token = get_string_token(self.buffer.as_ref());
-                        self.reset_buffer();
-                        self.next_state(&token);
-                        return Some(token);
-                    }
-                } else {
+        if start_char == '\0' {
+            self.set_error();
+            return None;
+        }
+
+        while let Some(ch) = self.src.next() {
+            if ch.is_backslash() {
+                if self.last_char.is_backslash() {
                     self.buffer.push(ch);
+                    self.set_last_char('\0');
+                } else {
+                    // escape for next character
                     self.set_last_char(ch);
                 }
+            } else if ch == start_char {
+                if self.last_char.is_backslash() {
+                    self.buffer.push(ch);
+                    self.set_last_char('\0');
+                } else {
+                    // string terminated
+                    let token = get_string_token(self.buffer.as_ref());
+                    self.reset_buffer();
+                    self.next_state(&token);
+                    return Some(token);
+                }
             } else {
-                // unterminated string
-                self.set_error();
-                break;
+                self.buffer.push(ch);
+                self.set_last_char(ch);
             }
         }
 
+        // unterminated string
+        self.set_error();
         None
     }
 
@@ -240,103 +226,95 @@ impl<'a> Lexer<'a> {
     fn next_number(&mut self) -> Option<Token> {
         self.set_number();
 
-        loop {
-            if let Some(&ch) = self.src.peek() {
-                if self.skip_space() && ch.is_srl_whitespace() {
-                    self.src.next();
-                    continue;
-                } else if ch.is_digit(10) {
-                    self.src.next();
-                    self.buffer.push(ch);
-                    self.set_last_char(ch);
-                } else if ch.is_srl_whitespace() || ch.is_group_char() {
-                    // number ends
-                    let token = get_number_token(self.buffer.as_ref());
-                    self.next_state(&token);
-                    self.reset_buffer();
-                    self.set_last_char(' ');
-                    return Some(token);
-                } else {
-                    // invalid char in number
-                    self.set_error();
-                    return None;
-                }
+        while let Some(&ch) = self.src.peek() {
+            if self.skip_space() && ch.is_srl_whitespace() {
+                self.src.next();
+                continue;
+            } else if ch.is_digit(10) {
+                self.src.next();
+                self.buffer.push(ch);
+                self.set_last_char(ch);
+            } else if ch.is_srl_whitespace() || ch.is_group_char() {
+                // number ends
+                let token = get_number_token(self.buffer.as_ref());
+                self.next_state(&token);
+                self.reset_buffer();
+                self.set_last_char(' ');
+                return Some(token);
             } else {
-                if self.buffer.is_empty() {
-                    self.set_error();
-                    return None;
-                } else {
-                    // number ends
-                    let token = get_number_token(self.buffer.as_ref());
-                    self.reset_buffer();
-                    self.set_eof();
-                    return Some(token);
-                }
+                // invalid char in number
+                self.set_error();
+                return None;
             }
         }
-    }
 
+        if self.buffer.is_empty() {
+            self.set_error();
+            return None;
+        } else {
+            // number ends
+            let token = get_number_token(self.buffer.as_ref());
+            self.reset_buffer();
+            self.set_eof();
+            return Some(token);
+        }
+    }
 
     /// Returns next char or digit
     fn next_char_or_digit(&mut self) -> Option<Token> {
         self.set_char_or_digit();
-        loop {
-            if let Some(ch) = self.src.next() {
-                if ch.is_srl_whitespace() {
-                    continue;
-                } else if ch.is_ascii() && ch.is_digit(10) {
-                    self.buffer.push(ch);
-                    let token = get_digit_token(self.buffer.as_ref());
-                    self.reset_buffer();
-                    self.set_ident();
-                    return Some(token);
-                } else if ch.is_ascii() && ch.is_alphabetic() {
-                    self.buffer.push(ch);
-                    let token = get_char_token(self.buffer.as_ref());
-                    self.reset_buffer();
-                    self.set_ident();
-                    return Some(token);
-                } else {
-                    // unexpected char
-                    self.set_error();
-                    return None;
-                }
+        while let Some(ch) = self.src.next() {
+            if ch.is_srl_whitespace() {
+                continue;
+            } else if ch.is_ascii() && ch.is_digit(10) {
+                self.buffer.push(ch);
+                let token = get_digit_token(self.buffer.as_ref());
+                self.reset_buffer();
+                self.set_ident();
+                return Some(token);
+            } else if ch.is_ascii() && ch.is_alphabetic() {
+                self.buffer.push(ch);
+                let token = get_char_token(self.buffer.as_ref());
+                self.reset_buffer();
+                self.set_ident();
+                return Some(token);
             } else {
-                self.set_error();
-                return None;
+                // unexpected char
+                break;
             }
         }
+
+        self.set_error();
+        return None;
     }
 
     /// Returns next Token
     fn next_token(&mut self) -> Option<Token> {
-        loop {
-            if let Some(&ch) = self.src.peek() {
-                if ch.is_srl_whitespace() {
-                    self.src.next();
-                    continue;
-                }
-
-                if ch.is_quote() {
-                    return self.next_string();
-                }
-
-                if (ch.is_ascii() && ch.is_alphabetic()) || ch.is_group_char() {
-                    return self.next_identifier();
-                }
-
-                if ch.is_digit(10) {
-                    return self.next_number();
-                }
-
-                self.set_error();
-                return None;
-
-            } else {
-                self.set_done();
-                return Some(get_eof_token());
+        while let Some(&ch) = self.src.peek() {
+            if ch.is_srl_whitespace() {
+                self.src.next();
+                continue;
             }
+
+            if ch.is_quote() {
+                return self.next_string();
+            }
+
+            if (ch.is_ascii() && ch.is_alphabetic()) || ch.is_group_char() {
+                return self.next_identifier();
+            }
+
+            if ch.is_digit(10) {
+                return self.next_number();
+            }
+
+            self.set_error();
+            return None;
+
         }
+
+        self.set_done();
+        Some(get_eof_token())
     }
 }
 
@@ -365,7 +343,7 @@ impl<'a> Iterator for Lexer<'a> {
                 self.set_done();
                 Some(get_eof_token())
             }
-            _ => None,
+            State::Error | State::Done => None,
         }
     }
 }
