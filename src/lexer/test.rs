@@ -13,42 +13,42 @@ fn test_next_identifier() {
     let token1 = lx.next_identifier().unwrap();
     assert_eq!(token1.val(), "begin with");
     assert!(match token1.token_type() {
-        TokenType::BeginWith => true,
+        TokenType::Anchor(Anchors::BeginWith)=> true,
         _ => false,
     });
 
     let token2 = lx.next_identifier().unwrap();
     assert_eq!(token2.val(), "capture");
     assert!(match token2.token_type() {
-        TokenType::Capture => true,
+        TokenType::Group(Groups::Capture) => true,
         _ => false,
     });
 
     let token3 = lx.next_identifier().unwrap();
     assert_eq!(token3.val(), "(");
     assert!(match token3.token_type() {
-        TokenType::GroupStart => true,
+        TokenType::Group(Groups::GroupStart) => true,
         _ => false,
     });
 
     let token4 = lx.next_identifier().unwrap();
     assert_eq!(token4.val(), "letter");
     assert!(match token4.token_type() {
-        TokenType::Letter => true,
+        TokenType::Character(Characters::Letter) => true,
         _ => false,
     });
 
     let token5 = lx.next_identifier().unwrap();
     assert_eq!(token5.val(), ")");
     assert!(match token5.token_type() {
-        TokenType::GroupEnd => true,
+        TokenType::Group(Groups::GroupEnd) => true,
         _ => false,
     });
 
     let token6 = lx.next_identifier().unwrap();
     assert_eq!(token6.val(), "twice");
     assert!(match token6.token_type() {
-        TokenType::Twice => true,
+        TokenType::Quantifier(Quantifiers::Twice) => true,
         _ => false,
     });
 
@@ -116,7 +116,7 @@ fn test_next_char_or_digit() {
     let token1 = lx.next_char_or_digit().unwrap();
     assert_eq!(token1.val(), "a");
     assert!(match token1.token_type() {
-        TokenType::Character => true,
+        TokenType::Char => true,
         _ => false,
     });
 
@@ -124,7 +124,7 @@ fn test_next_char_or_digit() {
     let token2 = lx.next_char_or_digit().unwrap();
     assert_eq!(token2.val(), "c");
     assert!(match token2.token_type() {
-        TokenType::Character => true,
+        TokenType::Char => true,
         _ => false,
     });
 
@@ -165,7 +165,7 @@ fn test_next_token() {
     let tk2 = lx.next_token().unwrap();
     assert_eq!(tk2.val(), "(");
     assert!(match tk2.token_type() {
-        TokenType::GroupStart => true,
+        TokenType::Group(Groups::GroupStart) => true,
         _ => false,
     });
 
@@ -177,14 +177,14 @@ fn test_lexer_iter() {
     let tk1 = lx.next().unwrap();
     assert_eq!(tk1.val(), "begin with");
     assert!(match tk1.token_type() {
-        TokenType::BeginWith => true,
+        TokenType::Anchor(Anchors::BeginWith) => true,
         _ => false,
     });
 
     let tk2 = lx.next().unwrap();
     assert_eq!(tk2.val(), "capture");
     assert!(match tk2.token_type() {
-        TokenType::Capture => true,
+        TokenType::Group(Groups::Capture) => true,
         _ => false,
     });
 
@@ -198,63 +198,63 @@ fn test_lexer_iter() {
     let tk4 = lx.next().unwrap();
     assert_eq!(tk4.val(), "capture");
     assert!(match tk2.token_type() {
-        TokenType::Capture => true,
+        TokenType::Group(Groups::Capture) => true,
         _ => false,
     });
 
     let tk5 = lx.next().unwrap();
     assert_eq!(tk5.val(), "(");
     assert!(match tk5.token_type() {
-        TokenType::GroupStart => true,
+        TokenType::Group(Groups::GroupStart) => true,
         _ => false,
     });
 
     let tk6 = lx.next().unwrap();
     assert_eq!(tk6.val(), "letter");
     assert!(match tk6.token_type() {
-        TokenType::Letter => true,
+        TokenType::Character(Characters::Letter) => true,
         _ => false,
     });
 
     let tk7 = lx.next().unwrap();
     assert_eq!(tk7.val(), "from");
     assert!(match tk7.token_type() {
-        TokenType::From => true,
+        TokenType::Specification(Specifications::From) => true,
         _ => false,
     });
 
     let tk8 = lx.next().unwrap();
     assert_eq!(tk8.val(), "a");
     assert!(match tk8.token_type() {
-        TokenType::Character => true,
+        TokenType::Char => true,
         _ => false,
     });
 
     let tk9 = lx.next().unwrap();
     assert_eq!(tk9.val(), "to");
     assert!(match tk9.token_type() {
-        TokenType::To => true,
+        TokenType::Specification(Specifications::To) => true,
         _ => false,
     });
 
     let tk10 = lx.next().unwrap();
     assert_eq!(tk10.val(), "k");
     assert!(match tk10.token_type() {
-        TokenType::Character => true,
+        TokenType::Char => true,
         _ => false,
     });
 
     let tk11 = lx.next().unwrap();
     assert_eq!(tk11.val(), "twice");
     assert!(match tk11.token_type() {
-        TokenType::Twice => true,
+        TokenType::Quantifier(Quantifiers::Twice) => true,
         _ => false,
     });
 
     let tk12 = lx.next().unwrap();
     assert_eq!(tk12.val(), ")");
     assert!(match tk12.token_type() {
-        TokenType::GroupEnd => true,
+        TokenType::Group(Groups::GroupEnd) => true,
         _ => false,
     });
 }

@@ -1,22 +1,28 @@
 #[derive(Clone, Copy, Debug)]
-pub enum TokenType {
+pub enum Characters {
     Literally,
     OneOf,
     Letter,
     UppercaseLetter,
+    Digit,
     AnyCharacter,
     NoCharacter,
-    Character,
-    Digit,
     Anything,
     NewLine,
     Whitespace,
     NoWhitespace,
     Tab,
     Raw,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Specifications {
     From,
     To,
+}
 
+#[derive(Clone, Copy, Debug)]
+pub enum Quantifiers {
     Exactly,
     Once,
     Twice,
@@ -28,32 +34,52 @@ pub enum TokenType {
     Time,
     Times,
     And,
+}
 
+#[derive(Clone, Copy, Debug)]
+pub enum Groups {
     Capture,
     As,
-    AnyOf,
     Until,
+    AnyOf,
 
     IfFollowedBy,
     IfNotFollowedBy,
     IfAlreadyHad,
     IfNotAlreadyHad,
 
+    GroupStart,
+    GroupEnd,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Flags {
     CaseInsensitive,
     MultiLine,
     AllLazy,
+}
 
+#[derive(Clone, Copy, Debug)]
+pub enum Anchors {
     BeginWith,
     MustEnd,
+}
 
-    Space,
+#[derive(Clone, Copy, Debug)]
+pub enum TokenType {
+    Character(Characters),
+    Specification(Specifications),
+    Quantifier(Quantifiers),
+    Group(Groups),
+    Flag(Flags),
+    Anchor(Anchors),
+
     Number,
     String,
-    GroupStart,
-    GroupEnd,
+    Char,
+    Digit,
 
     EndOfFile,
-    Undefined,
 }
 
 #[derive(Clone, Debug)]

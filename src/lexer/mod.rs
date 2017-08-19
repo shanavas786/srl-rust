@@ -1,6 +1,6 @@
 use std::str::Chars;
 use std::iter::Peekable;
-use token::{Token, TokenType};
+use token::*;
 use grammar::{MAX_SPC_INDEX, get_token, get_string_token, get_number_token, get_eof_token,
               get_char_token, get_digit_token};
 use std::ascii::AsciiExt;
@@ -51,12 +51,30 @@ impl<'a> Lexer<'a> {
     /// set next state
     fn next_state(&mut self, token: &Token) {
         match token.token_type() {
-            TokenType::Raw | TokenType::Literally | TokenType::OneOf | TokenType::As => {
-                self.set_string()
+            TokenType::Character(tk) => {
+                match tk {
+                    Characters::Raw | Characters::Literally | Characters::OneOf => {
+                        self.set_string()
+                    }
+                    _ => self.set_ident(),
+                }
             }
-            TokenType::Exactly | TokenType::Between | TokenType::And => self.set_number(),
-            TokenType::From | TokenType::To => self.set_char_or_digit(),
-            TokenType::Capture | TokenType::Until => self.set_none(),
+            TokenType::Quantifier(tk) => {
+                match tk {
+                    Quantifiers::Exactly | Quantifiers::Between | Quantifiers::And => {
+                        self.set_number()
+                    }
+                    _ => self.set_ident(),
+                }
+            }
+            TokenType::Specification(_) => self.set_char_or_digit(),
+            TokenType::Group(tk) => {
+                match tk {
+                    Groups::As => self.set_string(),
+                    Groups::GroupStart | Groups::GroupEnd => self.set_ident(),
+                    _ => self.set_none(),
+                }
+            }
             _ => self.set_ident(),
         }
     }
