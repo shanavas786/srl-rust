@@ -22,6 +22,7 @@ lazy_static! {
         table.insert("to", TokenType::Specification(Specifications::To));
 
         table.insert("exactly", TokenType::Quantifier(Quantifiers::Exactly));
+        table.insert("times", TokenType::Quantifier(Quantifiers::Times));
         table.insert("once", TokenType::Quantifier(Quantifiers::Once));
         table.insert("twice", TokenType::Quantifier(Quantifiers::Twice));
         table.insert("between", TokenType::Quantifier(Quantifiers::Between));

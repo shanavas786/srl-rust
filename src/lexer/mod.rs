@@ -119,6 +119,11 @@ impl<'a> Lexer<'a> {
         self.state = State::Error
     }
 
+    /// check error state
+    pub fn is_error(&self) -> bool {
+        self.state == State::Error
+    }
+
     /// checks if lexer should skip srl whitespace characters
     fn skip_space(&self) -> bool {
         self.buffer.is_empty() || self.last_char.is_space()
@@ -340,16 +345,6 @@ impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     /// Returns next token
-    ///
-    /// # Examples
-    /// ```
-    /// use srl::lexer::Lexer;
-    ///
-    /// let mut lx = Lexer::new("bEgin with letter from a to k twice");
-    /// assert!(lx.next().is_some());
-    /// assert!(lx.next().is_some());
-    /// assert!(lx.next().is_some());
-    /// ```
     fn next(&mut self) -> Option<Token> {
         match self.state {
             State::None => self.next_token(),

@@ -31,7 +31,6 @@ pub enum Quantifiers {
     OnceOrMore,
     NeverOrMore,
     AtLeast,
-    Time,
     Times,
     And,
 }
