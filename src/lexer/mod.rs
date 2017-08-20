@@ -43,11 +43,6 @@ impl<'a> Lexer<'a> {
         self.last_char = ch;
     }
 
-    /// reset buffer to empty string
-    fn reset_buffer(&mut self) {
-        self.buffer = String::new();
-    }
-
     /// set next state
     fn next_state(&mut self, token: &Token) {
         match token.token_type() {
@@ -153,7 +148,7 @@ impl<'a> Lexer<'a> {
                     return token;
                 } else if let Some(token) = get_token(self.buffer.as_ref()) {
                     // valid token !!
-                    self.reset_buffer();
+                    self.buffer.clear();
                     self.set_last_char(ch);
                     self.next_state(&token);
                     return Some(token);
@@ -179,7 +174,7 @@ impl<'a> Lexer<'a> {
             Some(get_eof_token())
         } else if let Some(token) = get_token(self.buffer.as_ref()) {
             // valid token !!
-            self.reset_buffer();
+            self.buffer.clear();
             self.set_eof();
             Some(token)
         } else {
@@ -230,7 +225,7 @@ impl<'a> Lexer<'a> {
                 } else {
                     // string terminated
                     let token = get_string_token(self.buffer.as_ref());
-                    self.reset_buffer();
+                    self.buffer.clear();
                     self.next_state(&token);
                     return Some(token);
                 }
@@ -261,7 +256,7 @@ impl<'a> Lexer<'a> {
                 // number ends
                 let token = get_number_token(self.buffer.as_ref());
                 self.next_state(&token);
-                self.reset_buffer();
+                self.buffer.clear();
                 self.set_last_char(' ');
                 return Some(token);
             } else {
@@ -277,7 +272,7 @@ impl<'a> Lexer<'a> {
         } else {
             // number ends
             let token = get_number_token(self.buffer.as_ref());
-            self.reset_buffer();
+            self.buffer.clear();
             self.set_eof();
             return Some(token);
         }
@@ -292,13 +287,13 @@ impl<'a> Lexer<'a> {
             } else if ch.is_ascii() && ch.is_digit(10) {
                 self.buffer.push(ch);
                 let token = get_digit_token(self.buffer.as_ref());
-                self.reset_buffer();
+                self.buffer.clear();
                 self.set_ident();
                 return Some(token);
             } else if ch.is_ascii() && ch.is_alphabetic() {
                 self.buffer.push(ch);
                 let token = get_char_token(self.buffer.as_ref());
-                self.reset_buffer();
+                self.buffer.clear();
                 self.set_ident();
                 return Some(token);
             } else {
