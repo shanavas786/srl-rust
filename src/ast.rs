@@ -1,12 +1,6 @@
 //! data types for SRL AST
 
-use token::{Token, Anchors, Flags};
-
-pub enum Specification {
-    Char { from: char, to: char },
-    Digit { from: i32, to: i32 },
-    String(String),
-}
+use token::{Anchors, Flags};
 
 pub enum Quantifier {
     NeverOrMore,
@@ -19,40 +13,50 @@ pub enum Quantifier {
     Alteast(i32),
 }
 
-pub struct Character {
-    pub ty: Token,
-    pub spec: Option<Specification>,
+pub enum CharKind {
+    Literally(String),
+    OneOf(String),
+    Letter {from: char, to: char},
+    UppercaseLetter {from: char, to: char},
+    Digit {from: i32, to: i32},
+    AnyCharacter,
+    NoCharacter,
+    Anything,
+    NewLine,
+    Whitespace,
+    NoWhitespace,
+    Tab,
+    Raw,
+}
+
+pub enum Character {
+    CharKind(CharKind),
+    Group(Box<Group>),
+    LookAroundChar(LookAround, Box<Character>),
+    CharLookAround(Box<Character>, LookAround),
+    CharAnchor(Box<Character>, Anchors),
+    AnchorChar(Anchors, Box<Character>),
+    CharFlag(Box<Character>, Flags),
+}
+
+pub enum LookAround {
+    Until(Group),
+    IfFollowedBy(Group),
+    IfNotFollowedBy(Group),
+    IfAlreadyHad(Group),
+    IfNotAlreadyHad(Group),
 }
 
 pub enum Group {
-    AnyOf(Vec<Expr>),
+    String(String),
+    AnyOf(Box<Expr>),
     Capture {
-        cond: Vec<Expr>,
+        cond: Box<Expr>,
         name: Option<String>,
     },
-    Until(Vec<Expr>),
-    IfFollowedBy(Vec<Expr>),
-    IfNotFollowedBy(Vec<Expr>),
-    IfAlreadyHad(Vec<Expr>),
-    IfNotAlreadyHad(Vec<Expr>),
 }
 
 pub enum Expr {
-    Anchor(Anchors),
-    Character(Character),
-    Group(Group),
-    Quantifier,
-    Flag(Flags),
-}
-
-impl From<Character> for Expr {
-    fn from(ch: Character) -> Expr {
-        Expr::Character(ch)
-    }
-}
-
-impl From<Token> for Expr {
-    fn from(tk: Token) -> Expr {
-        Expr::Character(Character { ty: tk, spec: None })
-    }
+    Character(Character, Option<Quantifier>),
+    Group(Box<Group>),
 }

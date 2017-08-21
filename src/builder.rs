@@ -8,7 +8,7 @@ pub struct Builder {
 
 
 impl Builder {
-    pub fn from_ast<'a>(expr: Vec<Expr>) -> &'a str {
-        "not implemented"
+    pub fn from_ast<'a>(expr: Expr) -> &'a str {
+        unimplemented!("builder")
     }
 }

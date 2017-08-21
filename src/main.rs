@@ -1,8 +1,8 @@
 extern crate srl;
 
-use srl::SRL;
+use srl::srl;
 
 fn main() {
-    let lx = SRL::new("bEgin with capture \"test\" capture(letter from a to k twice)");
+    let lx = srl("bEgin with capture \"test\" capture(letter from a to k twice)");
     println!("{}", lx);
 }
