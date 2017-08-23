@@ -16,6 +16,7 @@ pub enum Quantifier {
 pub enum CharKind {
     Literally(String),
     OneOf(String),
+    Raw(String),
     Letter {from: char, to: char},
     UppercaseLetter {from: char, to: char},
     Digit {from: i32, to: i32},
@@ -26,7 +27,6 @@ pub enum CharKind {
     Whitespace,
     NoWhitespace,
     Tab,
-    Raw,
 }
 
 pub enum Character {
@@ -58,5 +58,6 @@ pub enum Group {
 
 pub enum Expr {
     Character(Character, Option<Quantifier>),
+    CharExpr(Character, Box<Expr>),
     Group(Box<Group>),
 }

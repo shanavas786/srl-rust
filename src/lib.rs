@@ -11,8 +11,8 @@ mod builder;
 
 pub fn srl(src: &str) -> &str {
     let lx = lexer::Lexer::new(src);
-    let pr = parser::Parser::new(lx);
-    let res = pr.parse();
+    let mut pr = parser::Parser::new(lx);
+    let res = pr.parse_expr();
     if let Ok(ast) = res {
         return builder::Builder::from_ast(ast)
     } else {

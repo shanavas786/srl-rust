@@ -1,3 +1,5 @@
+use ast::CharKind;
+
 #[derive(Clone, Copy, Debug)]
 pub enum Characters {
     Literally,
@@ -13,6 +15,20 @@ pub enum Characters {
     NoWhitespace,
     Tab,
     Raw,
+}
+
+impl Characters {
+    pub fn to_charkind(self, val: Option<String>) -> CharKind {
+        match self {
+            Characters::Literally => CharKind::Literally(val.unwrap()),
+            Characters::OneOf => CharKind::OneOf(val.unwrap()),
+            Characters::Raw => CharKind::Raw(val.unwrap()),
+            Characters::AnyCharacter => CharKind::AnyCharacter,
+            Characters::NoCharacter => CharKind::NoCharacter,
+            Characters::Anything => CharKind::Anything,
+            _ => unimplemented!(""),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -101,5 +117,12 @@ impl Token {
 
     pub fn token_type(&self) -> TokenType {
         self.token_type
+    }
+
+    pub fn is_string(&self) -> bool {
+        match self.token_type {
+            TokenType::String => true,
+            _ => false,
+        }
     }
 }
