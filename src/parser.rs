@@ -58,7 +58,7 @@ impl<'a> Parser<'a> {
             Characters::Literally | Characters::OneOf | Characters::Raw => {
                 if let Some(spec) = self.next() {
                     if spec.is_string() {
-                        ty.to_charkind(Some(spec.val()));
+                        ty.to_charkind(Some(spec.val()))
                     } else {
                         return Err(format!("expected string"));
                     }
@@ -66,9 +66,26 @@ impl<'a> Parser<'a> {
                     return Err(format!("expected string"));
                 }
             },
-            _ => unimplemented!("1")
+            Characters::Letter |
+            Characters::UppercaseLetter |
+            Characters::Digit => {
+                self.parse_spec(ty)
+            },
+            _ => ty.to_charkind(None),
         };
 
         unimplemented!("")
+    }
+
+    fn parse_spec(&mut self, ty: Characters) -> ast::CharKind {
+        if let Some(from) = self.next() {
+            if from.token_type().is_spec_start() {
+                unimplemented!("")
+            } else {
+                ty.to_char_class_with_spec(None, None)
+            }
+        } else {
+            ty.to_char_class_with_spec(None, None)
+        }
     }
 }

@@ -4,6 +4,7 @@ use ast::CharKind;
 pub enum Characters {
     Literally,
     OneOf,
+    Raw,
     Letter,
     UppercaseLetter,
     Digit,
@@ -14,7 +15,6 @@ pub enum Characters {
     Whitespace,
     NoWhitespace,
     Tab,
-    Raw,
 }
 
 impl Characters {
@@ -26,7 +26,31 @@ impl Characters {
             Characters::AnyCharacter => CharKind::AnyCharacter,
             Characters::NoCharacter => CharKind::NoCharacter,
             Characters::Anything => CharKind::Anything,
-            _ => unimplemented!(""),
+            Characters::NewLine => CharKind::NewLine,
+            Characters::Whitespace => CharKind::Whitespace,
+            Characters::NoWhitespace => CharKind::NoWhitespace,
+            Characters::Tab => CharKind::Tab,
+            Characters::Letter |
+            Characters::UppercaseLetter |
+            Characters::Digit => unimplemented!(""),
+        }
+    }
+
+    pub fn to_char_class_with_spec(self, from: Option<char>, to: Option<char>) -> CharKind {
+        match self {
+            Characters::Letter => CharKind::Letter {
+                from: from.unwrap_or('a'),
+                to: to.unwrap_or('z'),
+            },
+            Characters::UppercaseLetter => CharKind::UppercaseLetter {
+                from: from.unwrap_or('A'),
+                to: to.unwrap_or('Z'),
+            },
+            Characters::Digit => CharKind::Digit {
+                from: from.unwrap_or('0') as i32,
+                to: to.unwrap_or('9') as i32,
+            },
+            _ => unreachable!(""),
         }
     }
 }
@@ -95,6 +119,15 @@ pub enum TokenType {
     Digit,
 
     EndOfFile,
+}
+
+impl TokenType {
+    pub fn is_spec_start(self) -> bool {
+        match self {
+            TokenType::Specification(Specifications::From) => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
