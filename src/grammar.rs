@@ -1,92 +1,89 @@
-use std::collections::HashMap;
-use token::*;
+use pest::prelude::*;
 
-lazy_static! {
-    static ref GRAMMAR_TABLE: HashMap<&'static str, TokenType> = {
-        let mut table = HashMap::new();
-        table.insert("literally", TokenType::Character(Characters::Literally));
-        table.insert("one of", TokenType::Character(Characters::OneOf));
-        table.insert("letter", TokenType::Character(Characters::Letter));
-        table.insert("uppercase letter", TokenType::Character(Characters::UppercaseLetter));
-        table.insert("any character", TokenType::Character(Characters::AnyCharacter));
-        table.insert("no character", TokenType::Character(Characters::NoCharacter));
-        table.insert("digit", TokenType::Character(Characters::Digit));
-        table.insert("anything", TokenType::Character(Characters::Anything));
-        table.insert("new line", TokenType::Character(Characters::NewLine));
-        table.insert("whitespace", TokenType::Character(Characters::Whitespace));
-        table.insert("no whitespace", TokenType::Character(Characters::NoWhitespace));
-        table.insert("tab", TokenType::Character(Characters::Tab));
-        table.insert("raw", TokenType::Character(Characters::Raw));
+impl_rdp! {
+    grammar! {
+        digit = _{ ['0'..'9'] }
+        number = @{ digit+ }
+        lower_apha = _{ ['a'..'z'] }
+        upper_apha = _{ ['A'..'Z'] }
+        alpha = @{ (lower_apha | upper_apha)* }
+        whitespace = _{ [" "] | ["\t"] | ["\u{000C}"] | ["\r"] | ["\n"] | [","] }
 
-        table.insert("from", TokenType::Specification(Specifications::From));
-        table.insert("to", TokenType::Specification(Specifications::To));
+        escape_sequence = _{ ["\\\\"] | ["\\\""] | ["\\\'"] | ["\\n"] | ["\\r"] | ["\\t"] }
+        literal_char = { escape_sequence | (!["\""] ~ any) }
+        string_literal = @{ ["b\""] ~ literal_char* ~ ["\""] }
 
-        table.insert("exactly", TokenType::Quantifier(Quantifiers::Exactly));
-        table.insert("times", TokenType::Quantifier(Quantifiers::Times));
-        table.insert("once", TokenType::Quantifier(Quantifiers::Once));
-        table.insert("twice", TokenType::Quantifier(Quantifiers::Twice));
-        table.insert("between", TokenType::Quantifier(Quantifiers::Between));
-        table.insert("and", TokenType::Quantifier(Quantifiers::And));
-        table.insert("optional", TokenType::Quantifier(Quantifiers::Optional));
-        table.insert("once or more", TokenType::Quantifier(Quantifiers::OnceOrMore));
-        table.insert("never or more", TokenType::Quantifier(Quantifiers::NeverOrMore));
-        table.insert("at least", TokenType::Quantifier(Quantifiers::AtLeast));
+        exactly = { [i"exactly"] ~ number ~ [i"times"] }
+        once = { [i"once"] }
+        twice = { [i"twice"] }
+        between_x_y = { [i"between"] ~ number ~ [i"and"] ~ number ~ [i"times"]? }
+        optional = { [i"optional"] }
+        once_or_more = { [i"once"] ~ [i"or"] ~ [i"more"] }
+        never_or_more = { [i"two"] ~ [i"or"] ~ [i"more"] }
+        atleast_x = { [i"atleast"] ~ number ~ [i"times"] }
 
-        table.insert("capture", TokenType::Group(Groups::Capture));
-        table.insert("as", TokenType::Group(Groups::As));
-        table.insert("any of", TokenType::Group(Groups::AnyOf));
-        table.insert("either of", TokenType::Group(Groups::AnyOf));
-        table.insert("until", TokenType::Group(Groups::Until));
-        table.insert("if followed by", TokenType::Group(Groups::IfFollowedBy));
-        table.insert("if not followed by", TokenType::Group(Groups::IfNotFollowedBy));
-        table.insert("if already had", TokenType::Group(Groups::IfAlreadyHad));
-        table.insert("if not already had", TokenType::Group(Groups::IfNotAlreadyHad));
-        table.insert("(", TokenType::Group(Groups::GroupStart));
-        table.insert(")", TokenType::Group(Groups::GroupEnd));
+        quantifer = _{ exactly | once | twice | between_x_y | optional |
+                       once_or_more | never_or_more | atleast_x }
 
-        table.insert("case insensitive", TokenType::Flag(Flags::CaseInsensitive));
-        table.insert("multi line", TokenType::Flag(Flags::MultiLine));
-        table.insert("all lazy", TokenType::Flag(Flags::AllLazy));
+        anchor = { (([i"begin"] | [i"start"]) ~ [i"with"]) |
+                      ([i"must"] ~ [i"end"]) }
 
-        table.insert("begin with", TokenType::Anchor(Anchors::BeginWith));
-        table.insert("starts with", TokenType::Anchor(Anchors::BeginWith));
-        table.insert("must end", TokenType::Anchor(Anchors::MustEnd));
+        flag = { ([i"case"] ~ [i"insensitive"]) |
+                   [i"multiline"] |
+                   ([i"all"] ~ [i"lazy"]) }
 
-        table.insert("eof", TokenType::EndOfFile);
-        table
-    };
-}
+        literally = { [i"literally"] ~ string_literal }
+        oneof = { [i"one"] ~ [i"of"]~ string_literal }
+        letter = { [i"letter"] ~ ([i"from"] ~ lower_apha ~ [i"to"] ~ lower_apha)? }
+        upperletter = { [i"upper"] ~ [i"letter"] ~ ([i"from"] ~ upper_apha ~ [i"to"] ~ upper_apha)? }
+        anycharacter = { [i"any"] ~ [i"character"] }
+        nocharacter = { [i"no"] ~ [i"character"] }
+        chardigit = { [i"digit"] ~ ([i"from"] ~ digit ~ [i"to"] ~ digit)? }
+        anything = { [i"anything"] }
+        newline = { [i"new"] ~ [i"line"] }
+        space = { [i"whitespace"] }
+        tab = { [i"tab"] }
+        nospace = { [i"no"] ~ [i"whitespace"] }
+        raw = { [i"raw"] ~ string_literal }
 
-/// greatest index space can occurr in a token
-pub const MAX_SPC_INDEX: usize = 15;
+        character = { literally |
+                      oneof |
+                      letter |
+                      upperletter |
+                      anycharacter |
+                      nocharacter |
+                      chardigit |
+                      anything |
+                      newline |
+                      space |
+                      nospace |
+                      raw |
+                      group |
+                      capture |
+                      anyof |
+                      until }
 
-pub fn get_token<'a>(token: &'a str) -> Option<Token> {
-    GRAMMAR_TABLE.get(token).and_then(
-        |tk| Some(Token::new(token, *tk)),
-    )
-}
 
-// create a String token with given value
-pub fn get_string_token(val: &str) -> Token {
-    Token::new(val, TokenType::String)
-}
+        group = { string_literal |
+                  (["("] ~ character ~ [")"]) }
+        capture = { [i"capture"] ~ group  ~ ([i"as"] ~ string_literal)? }
+        anyof = { ([i"any"] | [i"either"]) ~ [i"of"] ~ group }
+        until = { [i"until"] ~ group }
 
-// create a Number token with given value
-pub fn get_number_token(val: &str) -> Token {
-    Token::new(val, TokenType::Number)
-}
+        iffollowedby = { [i"if"] ~ [i"followed"] ~ [i"by"] ~ group }
+        ifnotfollowedby = { [i"if"] ~ [i"not"] ~ [i"followed"] ~ [i"by"] ~ group }
+        ifalreadyhad = { [i"if"] ~ [i"already"] ~ [i"had"] ~ group }
+        ifnotalreadyhad = { [i"if"] ~ [i"not"] ~ [i"already"] ~ [i"had"] ~ group }
+        lookaround = _{ iffollowedby | ifnotfollowedby | ifalreadyhad | ifnotfollowedby }
 
-// create a character token with given value
-pub fn get_char_token(val: &str) -> Token {
-    Token::new(val, TokenType::Char)
-}
-
-// create a digit token with given value
-pub fn get_digit_token(val: &str) -> Token {
-    Token::new(val, TokenType::Digit)
-}
-
-// create a EndOfFile token
-pub fn get_eof_token() -> Token {
-    Token::new("eof", TokenType::EndOfFile)
+        expression = { (character ~ quantifer) |
+                        (character ~ anchor) |
+                        (character ~ quantifer ~ anchor) |
+                        (anchor ~ character) |
+                        (anchor ~ anchor) |
+                        (character ~ flag) |
+                        (character ~ lookaround) |
+                        (lookaround ~ character) |
+                        (character ~ character) }
+    }
 }
