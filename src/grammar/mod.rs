@@ -3,15 +3,15 @@ use pest::prelude::*;
 impl_rdp! {
     grammar! {
         digit = _{ ['0'..'9'] }
+        single_digit = { digit }
         number = @{ digit+ }
-        lower_apha = _{ ['a'..'z'] }
-        upper_apha = _{ ['A'..'Z'] }
-        alpha = @{ (lower_apha | upper_apha)* }
+        lower_alpha = { ['a'..'z'] }
+        upper_alpha = { ['A'..'Z'] }
         whitespace = _{ [" "] | ["\t"] | ["\u{000C}"] | ["\r"] | ["\n"] | [","] }
 
         escape_sequence = _{ ["\\\\"] | ["\\\""] | ["\\\'"] | ["\\n"] | ["\\r"] | ["\\t"] }
-        literal_char = { escape_sequence | (!["\""] ~ any) }
-        string_literal = @{ ["b\""] ~ literal_char* ~ ["\""] }
+        literal_char = _{ escape_sequence | (!["\""] ~ any) }
+        string_literal = @{ (["\""] | ["'"]) ~ literal_char* ~ (["\""] | ["'"]) }
 
         exactly = { [i"exactly"] ~ number ~ [i"times"] }
         once = { [i"once"] }
@@ -19,26 +19,28 @@ impl_rdp! {
         between_x_y = { [i"between"] ~ number ~ [i"and"] ~ number ~ [i"times"]? }
         optional = { [i"optional"] }
         once_or_more = { [i"once"] ~ [i"or"] ~ [i"more"] }
-        never_or_more = { [i"two"] ~ [i"or"] ~ [i"more"] }
+        never_or_more = { [i"never"] ~ [i"or"] ~ [i"more"] }
         atleast_x = { [i"atleast"] ~ number ~ [i"times"] }
 
         quantifer = _{ exactly | once | twice | between_x_y | optional |
                        once_or_more | never_or_more | atleast_x }
 
-        anchor = { (([i"begin"] | [i"start"]) ~ [i"with"]) |
-                      ([i"must"] ~ [i"end"]) }
+        begin_with = { ([i"begin"] | [i"start"]) ~ [i"with"] }
+        must_end = { [i"must"] ~ [i"end"] }
+        anchor = _{  begin_with | must_end }
 
-        flag = { ([i"case"] ~ [i"insensitive"]) |
-                   [i"multiline"] |
-                   ([i"all"] ~ [i"lazy"]) }
+        case_insensitive = { [i"case"] ~ [i"insensitive"] }
+        multiline = { [i"multiline"] }
+        all_lazy = { [i"all"] ~ [i"lazy"] }
+        flag = _{ case_insensitive | multiline | all_lazy }
 
         literally = { [i"literally"] ~ string_literal }
         oneof = { [i"one"] ~ [i"of"]~ string_literal }
-        letter = { [i"letter"] ~ ([i"from"] ~ lower_apha ~ [i"to"] ~ lower_apha)? }
-        upperletter = { [i"upper"] ~ [i"letter"] ~ ([i"from"] ~ upper_apha ~ [i"to"] ~ upper_apha)? }
+        letter = { [i"letter"] ~ ([i"from"] ~ lower_alpha ~ [i"to"] ~ lower_alpha)? }
+        upperletter = { [i"upper"] ~ [i"case"] ~ [i"letter"] ~ ([i"from"] ~ upper_alpha ~ [i"to"] ~ upper_alpha)? }
         anycharacter = { [i"any"] ~ [i"character"] }
         nocharacter = { [i"no"] ~ [i"character"] }
-        chardigit = { [i"digit"] ~ ([i"from"] ~ digit ~ [i"to"] ~ digit)? }
+        chardigit = { [i"digit"] ~ ([i"from"] ~ single_digit ~ [i"to"] ~ single_digit)? }
         anything = { [i"anything"] }
         newline = { [i"new"] ~ [i"line"] }
         space = { [i"whitespace"] }
@@ -61,8 +63,16 @@ impl_rdp! {
                       group |
                       capture |
                       anyof |
-                      until }
-
+                      until |
+                      (character ~ quantifer) |
+                      (character ~ anchor) |
+                      (character ~ quantifer ~ anchor) |
+                      (anchor ~ character) |
+                      (anchor ~ anchor) |
+                      (character ~ flag) |
+                      (character ~ lookaround) |
+                      (lookaround ~ character) |
+                      (character+) }
 
         group = { string_literal |
                   (["("] ~ character ~ [")"]) }
@@ -76,14 +86,10 @@ impl_rdp! {
         ifnotalreadyhad = { [i"if"] ~ [i"not"] ~ [i"already"] ~ [i"had"] ~ group }
         lookaround = _{ iffollowedby | ifnotfollowedby | ifalreadyhad | ifnotfollowedby }
 
-        expression = { (character ~ quantifer) |
-                        (character ~ anchor) |
-                        (character ~ quantifer ~ anchor) |
-                        (anchor ~ character) |
-                        (anchor ~ anchor) |
-                        (character ~ flag) |
-                        (character ~ lookaround) |
-                        (lookaround ~ character) |
-                        (character ~ character) }
+        srl = _{ soi ~ character? ~ eoi }
     }
+
 }
+
+#[cfg(test)]
+mod tests;
